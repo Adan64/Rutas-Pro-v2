@@ -377,6 +377,58 @@ function optimizeAllZones() {
   });
 }
 
+function renameZone(oldName) {
+  const newName = prompt(`Cambiar nombre de la zona "${oldName}":`, oldName);
+  if (newName && newName.trim() && newName.trim() !== oldName) {
+    const trimmed = newName.trim();
+    
+    // 1. Update master list
+    APP.rawClients.forEach(c => {
+      if (c.ZONA === oldName) c.ZONA = trimmed;
+    });
+
+    // 2. Re-group zones in APP.zones
+    APP.zones = {};
+    APP.rawClients.forEach(c => {
+      const zone = (c.ZONA || '').trim();
+      if (!zone || zone === 'SIN ZONA') return;
+      if (!APP.zones[zone]) APP.zones[zone] = [];
+      APP.zones[zone].push(c);
+    });
+
+    // 3. Update Results and Drivers (if calculated)
+    if (APP.zoneResults && APP.zoneResults[oldName]) {
+      APP.zoneResults[trimmed] = APP.zoneResults[oldName];
+      delete APP.zoneResults[oldName];
+      
+      // Update the clients within the result object
+      if (APP.zoneResults[trimmed].ordered) {
+        APP.zoneResults[trimmed].ordered.forEach(oc => oc.ZONA = trimmed);
+      }
+      
+      // Update driver assignments
+      APP.drivers.forEach(d => {
+        if (d.zones) {
+          d.zones = d.zones.map(z => z === oldName ? trimmed : z);
+        }
+      });
+
+      // Update visibility state
+      if (APP.visibleZones && APP.visibleZones[oldName] !== undefined) {
+        APP.visibleZones[trimmed] = APP.visibleZones[oldName];
+        delete APP.visibleZones[oldName];
+      }
+    }
+
+    // 4. Force UI refresh everywhere
+    renderZonesTable();
+    refreshConfigMapMarkers();
+    if (APP.currentStep === 3) showResults(); 
+    
+    showToast(`✅ Zona renombrada a "${trimmed}"`);
+  }
+}
+
 function renderZonesTable() {
   const container = document.getElementById('zonesTableContainer');
   if (container) {
@@ -388,10 +440,11 @@ function renderZonesTable() {
         const color = getColor(z);
         const count = APP.zones[z].length;
         return `
-          <div class="zone-tag">
+          <div class="zone-tag" onclick="renameZone('${z.replace(/'/g,"\\'")}')" style="cursor:pointer" title="Click para renombrar">
             <span class="zone-tag-color" style="background:${color}"></span>
             <span>${z}</span>
             <span class="zone-tag-count">${count} pts</span>
+            <span style="font-size:10px; margin-left:4px; opacity:0.5">✎</span>
           </div>
         `;
       }).join('');
@@ -505,10 +558,10 @@ function refreshMapZonePanel() {
     const color = getColor(z);
     const count = APP.zones[z].length;
     return `
-      <div class="map-zone-row">
+      <div class="map-zone-row" onclick="renameZone('${z.replace(/'/g,"\\'")}')" style="cursor:pointer" title="Click para renombrar">
         <span class="map-zone-row-dot" style="background:${color}"></span>
         <span class="map-zone-row-name">${z}</span>
-        <span class="map-zone-row-count">${count}</span>
+        <span class="map-zone-row-count">${count} <small style="opacity:0.5;margin-left:2px">✎</small></span>
       </div>`;
   }).join('');
 }
@@ -593,8 +646,11 @@ function clearMapSelection() {
 
 function assignToNewZone() {
   const nextNum = Object.keys(APP.zones).length + 1;
-  const zoneName = `Zona ${nextNum}`;
-  assignSelectionTo(zoneName);
+  const defaultName = `Zona ${nextNum}`;
+  const zoneName = prompt('Ingresá el nombre para la nueva zona:', defaultName);
+  if (zoneName && zoneName.trim()) {
+    assignSelectionTo(zoneName.trim());
+  }
 }
 
 function assignToExistingZone() {

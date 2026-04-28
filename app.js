@@ -352,6 +352,7 @@ function nearestNeighbor(clients, sLat, sLon) {
     const client = remaining[minIdx];
     cumKm += minDist;
     ordered.push({ ...client, ORDER: ordered.length+1, LEG_KM: rd(minDist,4), CUM_KM: rd(cumKm,4),
+      DIST_DIRECT: rd(haversine(sLat, sLon, client.LATITUDE, client.LONGITUDE), 4),
       LEG_KM_REAL: null, LEG_MIN_REAL: null, CUM_KM_REAL: null, CUM_MIN_REAL: null });
     curLat = client.LATITUDE; curLon = client.LONGITUDE;
     remaining.splice(minIdx, 1);
@@ -821,7 +822,7 @@ function renderDriversPanel() {
                 <div class="stop-name">${c.CLIENTE} — ${c.NOMBRE_CLIENTE}</div>
                 <div class="stop-desc">${c.DESCRIPCION}</div>
                 <div class="stop-schedule">⏰ Llegada: <b>${c.ARRIVAL_TIME_STR}</b> · Salida: <b>${c.DEPARTURE_TIME_STR}</b></div>
-                <div class="stop-km">${c.LEG_KM} km desde anterior · Acumulado: ${c.CUM_KM} km${c.LEG_KM_REAL!=null?` · Real: ${c.LEG_KM_REAL}km`:''}</div>
+                <div class="stop-km">${c.LEG_KM} km desde anterior · <b>${c.DIST_DIRECT} km desde origen</b> · Acumulado: ${c.CUM_KM} km${c.LEG_KM_REAL!=null?` · Real: ${c.LEG_KM_REAL}km`:''}</div>
               </div>
             </div>`;
           }).join('')}
@@ -907,7 +908,7 @@ function copyDriverWhatsApp(di) {
     result.ordered.forEach(c => {
       text += `${globalOrder}. *${c.CLIENTE}* — ${c.NOMBRE_CLIENTE}\n`;
       if (c.DESCRIPCION) text += `   📋 ${c.DESCRIPCION}\n`;
-      text += `   📏 ${c.LEG_KM} km desde anterior (acum: ${c.CUM_KM} km)`;
+      text += `   📏 ${c.LEG_KM} km desde anterior (desde origen: ${c.DIST_DIRECT} km)`;
       if (c.LEG_KM_REAL != null) text += ` · Real: ${c.LEG_KM_REAL}km (${c.LEG_MIN_REAL}min)`;
       text += `\n`;
       globalOrder++;
@@ -1088,6 +1089,7 @@ function recalcZoneDistances(zone) {
     c.LEG_KM = rd(legKm, 4);
     cumKm += legKm;
     c.CUM_KM = rd(cumKm, 4);
+    c.DIST_DIRECT = rd(haversine(APP.startLat, APP.startLon, c.LATITUDE, c.LONGITUDE), 4);
     curLat = c.LATITUDE; curLon = c.LONGITUDE;
     // Invalidate OSRM data (order changed)
     c.LEG_KM_REAL = null; c.LEG_MIN_REAL = null;
@@ -1138,7 +1140,7 @@ function updateMapForZone(zone) {
         <div style="font-size:12px;color:#555">${c.NOMBRE_CLIENTE}</div>
         <hr style="margin:6px 0">
         <div style="font-size:12px">📍 Zona: <b>${zone}</b> — #${c.ORDER}</div>
-        <div style="font-size:12px">📏 Tramo: <b>${c.LEG_KM} km</b> · Acum: <b>${c.CUM_KM} km</b></div>
+        <div style="font-size:12px">📏 Tramo: <b>${c.LEG_KM} km</b> · Origen: <b>${c.DIST_DIRECT} km</b> · Acum: <b>${c.CUM_KM} km</b></div>
       </div>`);
     if (visible) marker.addTo(APP.resultsMap);
     APP.mapLayers.markers[zone].push(marker);
@@ -1719,6 +1721,7 @@ function exportExcel() {
             'DIRECCIÓN': c.DIRECCION || '',
             'DESCRIPCIÓN': c.DESCRIPCION || '',
             'KM TRAMO': c.LEG_KM,
+            'DIST. DESDE ORIGEN': c.DIST_DIRECT,
             'ACUMULADO': c.CUM_KM,
             'UBICACION': `${c.LATITUDE}, ${c.LONGITUDE}`
           });

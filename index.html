@@ -86,6 +86,9 @@
           <span class="col-chip required">LATITUDE</span>
           <span class="col-chip required">LONGITUDE</span>
         </div>
+        <div style="margin-top: 12px;">
+          <button class="btn btn-secondary btn-sm" onclick="downloadTemplate()">📥 Descargar Planilla Base (.xlsx)</button>
+        </div>
       </div>
 
       <div id="previewSection" style="display:none">
@@ -204,6 +207,14 @@
             <button class="btn-mc" id="btnPolygonDraw" onclick="startPolygonDraw()" title="Dibujar polígono">✏️ Polígono</button>
             <button class="btn-mc" id="btnRectDraw" onclick="startRectDraw()" title="Dibujar rectángulo">⬜ Rectángulo</button>
             <div class="map-ctrl-sep"></div>
+            <select class="map-select" onchange="setConfigMapStyle(this.value)" title="Cambiar fondo del mapa">
+              <option value="dark">🌙 Oscuro</option>
+              <option value="streets">🏘️ Calles</option>
+              <option value="satellite">🛰️ Satélite</option>
+              <option value="terrain">⛰️ Terreno</option>
+              <option value="light">☀️ Claro</option>
+            </select>
+            <div class="map-ctrl-sep"></div>
             <button class="btn-mc danger" onclick="clearMapSelection()">🗑️ Limpiar</button>
             <div class="map-ctrl-sep"></div>
             <button class="btn-mc" id="btnConfigFullscreen" onclick="toggleConfigMapFullscreen()" title="Pantalla completa">⛶</button>
@@ -320,7 +331,10 @@
             <div class="map-ctrl-group">
               <span class="map-ctrl-label">Fondo</span>
               <button class="btn-mc active" id="btnDarkMap" onclick="setMapStyle('dark')">🌙 Oscuro</button>
+              <button class="btn-mc" id="btnStreetMap" onclick="setMapStyle('streets')">🏘️ Calles</button>
               <button class="btn-mc" id="btnSatMap" onclick="setMapStyle('satellite')">🛰️ Satélite</button>
+              <button class="btn-mc" id="btnTerrainMap" onclick="setMapStyle('terrain')">⛰️ Terreno</button>
+              <button class="btn-mc" id="btnLightMap" onclick="setMapStyle('light')">☀️ Claro</button>
             </div>
             <div class="map-ctrl-sep"></div>
             <div class="map-ctrl-group">

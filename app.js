@@ -38,8 +38,8 @@ const APP = {
   mapStyle: 'dark',
   visibleZones: {},
   selectedDayFilter: 0, 
-  tileLayerDark: null,
-  tileLayerSat: null,
+  tileLayers: {},
+  configTileLayers: {},
   charts: {},
   // Zone Editing State
   selectedIndices: new Set(),
@@ -219,6 +219,15 @@ function showUploadPreview(filename) {
   document.getElementById('pilZonas').textContent = `${Object.keys(APP.zones).length} zonas`;
 }
 
+function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+  const wsData = [REQUIRED_COLS];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb, ws, 'Planilla Base');
+  XLSX.writeFile(wb, 'rutaspro_planilla_base.xlsx');
+  if (typeof showToast === 'function') showToast('✓ Planilla base descargada');
+}
+
 // ============================================================
 // STEP 2 — CONFIG MAP
 // ============================================================
@@ -226,10 +235,16 @@ function initConfigMap() {
   if (APP.configMap) { APP.configMap.invalidateSize(); return; }
 
   APP.configMap = L.map('configMap').setView([APP.startLat, APP.startLon], 12);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; CartoDB',
-    crossOrigin: 'Anonymous'
-  }).addTo(APP.configMap);
+  
+  APP.configTileLayers = {
+    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', crossOrigin: 'Anonymous' }),
+    light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', crossOrigin: 'Anonymous' }),
+    streets: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }),
+    satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: '&copy; Google' }),
+    terrain: L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', { attribution: '&copy; Google' })
+  };
+
+  APP.configTileLayers.dark.addTo(APP.configMap);
 
   APP.configMapMarker = L.marker([APP.startLat, APP.startLon], { icon: makeStartMarker() })
     .addTo(APP.configMap).bindPopup('Punto de partida').openPopup();
@@ -660,9 +675,17 @@ function renderSummaryCards() {
 function initResultsMap() {
   if (!APP.resultsMap) {
     APP.resultsMap = L.map('resultsMap').setView([APP.startLat, APP.startLon], 12);
-    APP.tileLayerDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', crossOrigin: 'Anonymous' });
-    APP.tileLayerSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: '&copy; Google' });
-    (APP.mapStyle === 'satellite' ? APP.tileLayerSat : APP.tileLayerDark).addTo(APP.resultsMap);
+    
+    APP.tileLayers = {
+      dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', crossOrigin: 'Anonymous' }),
+      light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', crossOrigin: 'Anonymous' }),
+      streets: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }),
+      satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: '&copy; Google' }),
+      terrain: L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', { attribution: '&copy; Google' })
+    };
+    
+    const activeLayer = APP.tileLayers[APP.mapStyle] || APP.tileLayers.dark;
+    activeLayer.addTo(APP.resultsMap);
   } else {
     // Deep cleanup of all layers to prevent ghost lines
     Object.values(APP.mapLayers).forEach(group => {
@@ -1518,16 +1541,34 @@ function setRouteMode(mode) {
 
 function setMapStyle(style) {
   if (!APP.resultsMap) return;
+  
+  // Quitar todas las capas actuales
+  Object.values(APP.tileLayers).forEach(layer => {
+    if (APP.resultsMap.hasLayer(layer)) {
+      APP.resultsMap.removeLayer(layer);
+    }
+  });
+  
+  // Poner la nueva
   APP.mapStyle = style;
-  if (style === 'dark') {
-    if (APP.tileLayerSat) APP.resultsMap.removeLayer(APP.tileLayerSat);
-    if (APP.tileLayerDark) APP.tileLayerDark.addTo(APP.resultsMap);
-  } else {
-    if (APP.tileLayerDark) APP.resultsMap.removeLayer(APP.tileLayerDark);
-    if (APP.tileLayerSat) APP.tileLayerSat.addTo(APP.resultsMap);
+  if (APP.tileLayers[style]) {
+    APP.tileLayers[style].addTo(APP.resultsMap);
   }
+  
+  // Actualizar botones UI
   document.getElementById('btnDarkMap')?.classList.toggle('active', style === 'dark');
+  document.getElementById('btnStreetMap')?.classList.toggle('active', style === 'streets');
   document.getElementById('btnSatMap')?.classList.toggle('active', style === 'satellite');
+  document.getElementById('btnTerrainMap')?.classList.toggle('active', style === 'terrain');
+  document.getElementById('btnLightMap')?.classList.toggle('active', style === 'light');
+}
+
+function setConfigMapStyle(style) {
+  if (!APP.configMap) return;
+  Object.values(APP.configTileLayers).forEach(layer => {
+    if (APP.configMap.hasLayer(layer)) APP.configMap.removeLayer(layer);
+  });
+  if (APP.configTileLayers[style]) APP.configTileLayers[style].addTo(APP.configMap);
 }
 
 function toggleZoneVisibility(zone) {

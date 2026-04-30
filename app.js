@@ -4,9 +4,15 @@
 // CONSTANTS
 // ============================================================
 const ZONE_COLORS = [
-  '#6366f1','#22d3ee','#10b981','#f59e0b','#ef4444',
-  '#a855f7','#ec4899','#14b8a6','#f97316','#84cc16',
-  '#06b6d4','#8b5cf6','#e11d48','#0ea5e9','#65a30d'
+  '#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', 
+  '#a855f7', '#ec4899', '#f97316', '#14b8a6', '#84cc16',
+  '#3b82f6', '#f43f5e', '#8b5cf6', '#0ea5e9', '#eab308',
+  '#d946ef', '#64748b', '#4338ca', '#0e7490', '#047857',
+  '#b45309', '#b91c1c', '#7e22ce', '#be185d', '#c2410c',
+  '#0f766e', '#4d7c0f', '#1d4ed8', '#be123c', '#6d28d9',
+  '#0369a1', '#a16207', '#a21caf', '#78716c', '#4ade80',
+  '#fb7185', '#a78bfa', '#ca8a04', '#dc2626', '#166534',
+  '#2dd4bf', '#fb923c', '#818cf8', '#22d3ee', '#34d399'
 ];
 
 const REQUIRED_COLS = ['CLIENTE','RAZON SOCIAL','NOMBRE CLIENTE','ZONA','DESCRIPCION','LATITUDE','LONGITUDE'];
@@ -41,11 +47,12 @@ const APP = {
   tileLayers: {},
   configTileLayers: {},
   charts: {},
-  // Zone Editing State
+  // Zone Editing & Highlighting
   selectedIndices: new Set(),
   isEditingZones: false,
   drawnItems: null,
-  drawControl: null
+  drawControl: null,
+  configMarkersByZone: {} // New: stores marker refs for highlighting
 };
 
 // ============================================================
@@ -439,8 +446,13 @@ function renderZonesTable() {
       container.innerHTML = zones.map(z => {
         const color = getColor(z);
         const count = APP.zones[z].length;
+        const zEscaped = z.replace(/'/g,"\\'");
         return `
-          <div class="zone-tag" onclick="renameZone('${z.replace(/'/g,"\\'")}')" style="cursor:pointer" title="Click para renombrar">
+          <div class="zone-tag" 
+               onclick="renameZone('${zEscaped}')" 
+               onmouseenter="highlightZoneMarkers('${zEscaped}')" 
+               onmouseleave="clearZoneHighlights()"
+               style="cursor:pointer" title="Click para renombrar">
             <span class="zone-tag-color" style="background:${color}"></span>
             <span>${z}</span>
             <span class="zone-tag-count">${count} pts</span>
@@ -490,13 +502,18 @@ function refreshConfigMapMarkers() {
   if (!APP.configMap) return;
   // Clear existing
   APP.configMap.eachLayer(l => { if(l instanceof L.Marker && l !== APP.configMapMarker) APP.configMap.removeLayer(l); });
+  APP.configMarkersByZone = {};
 
   APP.rawClients.forEach((c, idx) => {
+    const zName = c.ZONA || 'SIN ZONA';
     const color = c.ZONA ? getColor(c.ZONA) : '#94a3b8';
     const isSelected = APP.selectedIndices.has(idx);
     const marker = L.marker([c.LATITUDE, c.LONGITUDE], { 
       icon: makeNumMarker('', color, isSelected) 
     }).addTo(APP.configMap);
+
+    if (!APP.configMarkersByZone[zName]) APP.configMarkersByZone[zName] = [];
+    APP.configMarkersByZone[zName].push(marker);
 
     marker.on('click', (e) => {
       L.DomEvent.stopPropagation(e);
@@ -505,6 +522,23 @@ function refreshConfigMapMarkers() {
       } else {
         marker.bindPopup(`<b>${c.CLIENTE}</b><br>Zona: ${c.ZONA || 'Ninguna'}`).openPopup();
       }
+    });
+  });
+}
+
+function highlightZoneMarkers(zoneName) {
+  if (!APP.configMarkersByZone[zoneName]) return;
+  APP.configMarkersByZone[zoneName].forEach(m => {
+    const el = m.getElement();
+    if (el) el.classList.add('marker-highlighted');
+  });
+}
+
+function clearZoneHighlights() {
+  Object.values(APP.configMarkersByZone).forEach(markers => {
+    markers.forEach(m => {
+      const el = m.getElement();
+      if (el) el.classList.remove('marker-highlighted');
     });
   });
 }
@@ -557,8 +591,13 @@ function refreshMapZonePanel() {
   list.innerHTML = zones.map(z => {
     const color = getColor(z);
     const count = APP.zones[z].length;
+    const zEscaped = z.replace(/'/g,"\\'");
     return `
-      <div class="map-zone-row" onclick="renameZone('${z.replace(/'/g,"\\'")}')" style="cursor:pointer" title="Click para renombrar">
+      <div class="map-zone-row" 
+           onclick="renameZone('${zEscaped}')" 
+           onmouseenter="highlightZoneMarkers('${zEscaped}')" 
+           onmouseleave="clearZoneHighlights()"
+           style="cursor:pointer" title="Click para renombrar">
         <span class="map-zone-row-dot" style="background:${color}"></span>
         <span class="map-zone-row-name">${z}</span>
         <span class="map-zone-row-count">${count} <small style="opacity:0.5;margin-left:2px">✎</small></span>

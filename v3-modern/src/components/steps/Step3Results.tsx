@@ -12,7 +12,8 @@ import {
   Route, 
   Printer,
   ChevronRight,
-  TrendingDown
+  TrendingDown,
+  Maximize2
 } from 'lucide-react';
 import { useRutasStore } from '@/store/useRutasStore';
 import { MapWrapper } from '../map/MapWrapper';

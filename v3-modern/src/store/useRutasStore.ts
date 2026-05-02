@@ -1,6 +1,33 @@
 import { create } from 'zustand';
 import { Client, RouteResult } from '../lib/routing/RouteEngine';
 
+// Curated palette of 20 visually distinct colors for zone auto-assignment
+const ZONE_PALETTE = [
+  '#6366f1', // indigo
+  '#06b6d4', // cyan
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#a855f7', // purple
+  '#f97316', // orange
+  '#14b8a6', // teal
+  '#ec4899', // pink
+  '#84cc16', // lime
+  '#3b82f6', // blue
+  '#eab308', // yellow
+  '#8b5cf6', // violet
+  '#22c55e', // green
+  '#fb923c', // orange-400
+  '#38bdf8', // sky
+  '#f43f5e', // rose
+  '#a3e635', // lime-400
+  '#c084fc', // purple-400
+  '#2dd4bf', // teal-400
+];
+
+/** Returns a palette color for a given zone index (cycles if > 20 zones) */
+const pickZoneColor = (idx: number): string => ZONE_PALETTE[idx % ZONE_PALETTE.length];
+
 interface Driver {
   name: string;
   zones: string[];
@@ -84,7 +111,17 @@ export const useRutasStore = create<AppState>((set, get) => ({
   ...DEFAULT_STATE,
 
   setRawClients: ({ clients, zones, filename }) =>
-    set({ rawClients: clients, zones, filename, currentStep: 1 }),
+    set((state) => {
+      // Auto-assign distinct colors to every zone detected in the imported data.
+      // Preserve any existing user-overrides for zones that already have a config.
+      const existingConfigs = state.zoneConfigs;
+      const zoneNames = Object.keys(zones);
+      const newConfigs: Record<string, { color: string; icon: string }> = {};
+      zoneNames.forEach((name, idx) => {
+        newConfigs[name] = existingConfigs[name] ?? { color: pickZoneColor(idx), icon: '📍' };
+      });
+      return { rawClients: clients, zones, filename, currentStep: 1, zoneConfigs: newConfigs };
+    }),
 
   setStartPoint: (lat, lng) => set({ startLat: lat, startLon: lng }),
 
@@ -94,12 +131,17 @@ export const useRutasStore = create<AppState>((set, get) => ({
 
   updateConfig: (updates) => set((state) => ({ ...state, ...updates })),
 
-  updateZoneConfig: (name, updates) => set((state) => ({
-    zoneConfigs: {
-      ...state.zoneConfigs,
-      [name]: { ...(state.zoneConfigs[name] || { color: '#6366f1', icon: '📍' }), ...updates }
-    }
-  })),
+  updateZoneConfig: (name, updates) => set((state) => {
+    const existingZoneNames = Object.keys(state.zones);
+    const idx = existingZoneNames.indexOf(name);
+    const fallbackColor = idx >= 0 ? pickZoneColor(idx) : '#6366f1';
+    return {
+      zoneConfigs: {
+        ...state.zoneConfigs,
+        [name]: { ...(state.zoneConfigs[name] || { color: fallbackColor, icon: '📍' }), ...updates }
+      }
+    };
+  }),
 
   toggleSelectionMode: () => set((state) => ({ isSelectionMode: !state.isSelectionMode })),
 
@@ -119,9 +161,19 @@ export const useRutasStore = create<AppState>((set, get) => ({
       }
     });
 
+    // Auto-assign a distinct color to the new zone if it doesn't have one yet
+    const newZoneNames = Object.keys(newZones);
+    const updatedConfigs = { ...state.zoneConfigs };
+    newZoneNames.forEach((name, idx) => {
+      if (!updatedConfigs[name]) {
+        updatedConfigs[name] = { color: pickZoneColor(idx), icon: '📍' };
+      }
+    });
+
     return { 
       rawClients: updatedClients, 
       zones: newZones, 
+      zoneConfigs: updatedConfigs,
       selectedIndices: new Set() 
     };
   }),

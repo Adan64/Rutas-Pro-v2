@@ -71,7 +71,7 @@ export const DynamicMap = ({ center, zoom, tileUrl, onMapClick, onSelectionCreat
         
         <FeatureGroup>
           <EditControl
-            position="topright"
+            position="bottomleft"
             onCreated={onCreated}
             draw={{
               rectangle: { shapeOptions: { color: '#6366f1' } },

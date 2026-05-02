@@ -19,6 +19,8 @@ import { MapWrapper } from '../map/MapWrapper';
 import { Polyline, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { rd } from '@/lib/routing/RouteEngine';
+import { exportResultsToExcel } from '@/lib/services/ExcelService';
+import { exportResultsToPdf } from '@/lib/services/PdfService';
 
 const TABS = [
   { id: 'map', label: 'Mapa', icon: MapIcon },
@@ -86,10 +88,16 @@ export const Step3Results = () => {
 
       {/* ACTIONS */}
       <div className="flex flex-wrap gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3">
-        <button className="btn-success btn-sm flex items-center gap-2">
+        <button 
+          onClick={() => exportResultsToExcel(drivers, zoneResults)}
+          className="btn-success btn-sm flex items-center gap-2"
+        >
           <Download size={16} /> Excel
         </button>
-        <button className="btn-secondary btn-sm flex items-center gap-2">
+        <button 
+          onClick={() => exportResultsToPdf(drivers, zoneResults, stats)}
+          className="btn-secondary btn-sm flex items-center gap-2"
+        >
           <FileText size={16} /> PDF
         </button>
         <button className="btn-secondary btn-sm flex items-center gap-2">

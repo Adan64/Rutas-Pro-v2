@@ -3,10 +3,12 @@
 import { Header } from "@/components/layout/Header";
 import { StepsBar } from "@/components/layout/StepsBar";
 import { Step1Upload } from "@/components/steps/Step1Upload";
-import { Step2Config } from "@/components/steps/Step2Config";
-import { Step3Results } from "@/components/steps/Step3Results";
+import dynamic from "next/dynamic";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { useRutasStore } from "@/store/useRutasStore";
+
+const Step2Config = dynamic(() => import("@/components/steps/Step2Config").then(m => m.Step2Config), { ssr: false });
+const Step3Results = dynamic(() => import("@/components/steps/Step3Results").then(m => m.Step3Results), { ssr: false });
 
 export default function Home() {
   const { currentStep } = useRutasStore();

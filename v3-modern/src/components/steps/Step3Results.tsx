@@ -38,6 +38,15 @@ export const Step3Results = () => {
   } = useRutasStore();
   const [activeTab, setActiveTab] = useState('map');
 
+  const toggleFullscreen = () => {
+    const mapDiv = document.getElementById('results-map-container');
+    if (!document.fullscreenElement) {
+      mapDiv?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
   const stats = useMemo(() => {
     let totKm = 0;
     let totUnoptimized = 0;
@@ -138,7 +147,10 @@ export const Step3Results = () => {
       {/* TAB CONTENT */}
       <div className="h-[600px]">
         {activeTab === 'map' && (
-          <div className="h-full overflow-hidden rounded-3xl border border-[var(--border)] shadow-2xl">
+          <div 
+            id="results-map-container"
+            className="relative h-full overflow-hidden rounded-3xl border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
+          >
             <MapWrapper center={[startLat, startLon]} zoom={12}>
                {Object.entries(zoneResults).map(([name, result], idx) => {
                  const color = getColor(idx);
@@ -170,6 +182,16 @@ export const Step3Results = () => {
                  );
                })}
             </MapWrapper>
+
+            {/* FULLSCREEN BUTTON */}
+            <div className="absolute left-4 top-4 z-[500]">
+              <button 
+                onClick={toggleFullscreen}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md text-white shadow-xl hover:bg-[var(--card)]"
+              >
+                <Maximize2 size={18} />
+              </button>
+            </div>
           </div>
         )}
 

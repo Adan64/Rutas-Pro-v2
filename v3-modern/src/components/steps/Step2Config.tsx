@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MapPin, 
   Users, 
@@ -65,6 +65,15 @@ export const Step2Config = () => {
 
   const handleClearSelection = () => {
     setSelectedIndices(new Set());
+  };
+
+  const toggleFullscreen = () => {
+    const mapDiv = document.getElementById('map-container');
+    if (!document.fullscreenElement) {
+      mapDiv?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
   };
 
   const startIcon = L.divIcon({
@@ -230,7 +239,40 @@ export const Step2Config = () => {
           </motion.div>
         )}
 
-        <div className="mt-auto flex gap-3 pb-4">
+        {/* ZONE SUMMARY (NEW) */}
+        <div className="card-premium flex-1 overflow-y-auto">
+          <div className="mb-4 flex items-center justify-between border-b border-[var(--border)] pb-3">
+             <div className="flex items-center gap-2">
+                <Route className="text-[var(--cyan)]" size={18} />
+                <h3 className="font-bold text-white">Resumen de Zonas</h3>
+             </div>
+             <span className="text-[10px] font-bold text-[var(--text-faint)] uppercase">{Object.keys(zones).length} Zonas</span>
+          </div>
+          <div className="space-y-2">
+            {Object.entries(zones).length === 0 ? (
+              <div className="py-8 text-center text-xs text-[var(--text-faint)] italic">
+                No hay zonas asignadas aún.<br/>Usá las herramientas del mapa.
+              </div>
+            ) : (
+              Object.entries(zones).map(([name, clients]) => (
+                <div key={name} className="flex items-center justify-between rounded-lg bg-[var(--card)] p-2 border border-[var(--border)]">
+                   <div className="flex flex-col">
+                      <span className="text-xs font-bold text-white">{name}</span>
+                      <span className="text-[10px] text-[var(--text-faint)]">{clients.length} clientes</span>
+                   </div>
+                   <button 
+                    onClick={() => {/* TODO: Focus zone on map */}}
+                    className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-[var(--surface)] text-[var(--text-faint)] hover:text-white"
+                   >
+                     <ChevronRight size={14} />
+                   </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="mt-auto flex gap-3 pt-4">
           <button 
             onClick={() => setStep(1)}
             className="btn-secondary flex-1"
@@ -248,7 +290,10 @@ export const Step2Config = () => {
       </div>
 
       {/* MAP AREA */}
-      <div className="relative flex-1 overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+      <div 
+        id="map-container"
+        className="relative flex-1 overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
+      >
         <MapWrapper 
           center={[startLat, startLon]} 
           zoom={13} 
@@ -294,24 +339,29 @@ export const Step2Config = () => {
         </MapWrapper>
 
         {/* FLOATING TOOLS */}
-        <div className="absolute right-4 top-4 z-[500] flex flex-col gap-2">
+        <div className="absolute left-4 top-4 z-[500] flex flex-col gap-2">
           <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md shadow-xl">
              <button 
               onClick={toggleSelectionMode}
               className={`flex h-10 w-10 items-center justify-center text-white transition-colors border-b border-[var(--border)] ${isSelectionMode ? 'bg-[var(--accent)]' : 'hover:bg-[var(--card)]'}`} 
               title="Selección manual"
             >
-              📍
+              <MapPin size={18} />
             </button>
-             <button className="flex h-10 w-10 items-center justify-center text-white hover:bg-[var(--card)] border-b border-[var(--border)]" title="Dibujar Polígono (Usar controles de Leaflet Draw)">✏️</button>
              <button 
               onClick={handleClearSelection}
               className="flex h-10 w-10 items-center justify-center text-white hover:bg-red-500/20" 
               title="Borrar selección"
             >
-              <Trash2 size={16} />
+              <Trash2 size={18} />
             </button>
           </div>
+          <button 
+            onClick={toggleFullscreen}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md text-white shadow-xl hover:bg-[var(--card)]"
+          >
+            <Maximize2 size={18} />
+          </button>
         </div>
 
         {/* SELECTION PILL */}

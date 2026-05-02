@@ -76,9 +76,11 @@ export function exportResultsToPdf(drivers: any[], zoneResults: Record<string, a
         5: { cellWidth: 22, halign: 'right' }
       },
       margin: { left: 14, right: 14 },
-      didDrawPage: (data) => {
-        // Add note about OSRM
-        if (data.pageCount === doc.internal.getNumberOfPages()) {
+      didDrawPage: (_data) => {
+        // Add note about OSRM on the last page
+        const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
+        const totalPages = (doc as any).internal.getNumberOfPages();
+        if (currentPage === totalPages) {
              doc.setFontSize(7);
              doc.setTextColor(100);
              doc.text('* Indica distancia real por carretera (OSRM)', 14, (doc as any).internal.pageSize.height - 15);

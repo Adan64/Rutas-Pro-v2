@@ -31,6 +31,9 @@ export interface RouteResult {
   totalKm: number;
   returnKm: number;
   unoptimizedKm: number;
+  roadGeometry?: [number, number][];
+  totalKmReal?: number;
+  totalMinReal?: number;
 }
 
 /**

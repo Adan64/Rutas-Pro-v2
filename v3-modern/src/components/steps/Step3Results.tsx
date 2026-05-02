@@ -33,7 +33,7 @@ export const Step3Results = () => {
   const { 
     zoneResults, drivers, startLat, startLon, 
     fuelL100, fuelPrice,
-    setStep 
+    setStep, calculateOSRM, isCalculating
   } = useRutasStore();
   const [activeTab, setActiveTab] = useState('map');
 
@@ -41,7 +41,7 @@ export const Step3Results = () => {
     let totKm = 0;
     let totUnoptimized = 0;
     Object.values(zoneResults).forEach(r => {
-      totKm += r.totalKm + r.returnKm;
+      totKm += r.totalKmReal || (r.totalKm + r.returnKm);
       totUnoptimized += r.unoptimizedKm;
     });
     
@@ -89,6 +89,13 @@ export const Step3Results = () => {
       {/* ACTIONS */}
       <div className="flex flex-wrap gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3">
         <button 
+          onClick={calculateOSRM}
+          disabled={isCalculating}
+          className="btn-primary btn-sm flex items-center gap-2 disabled:opacity-50"
+        >
+          {isCalculating ? 'Calculando...' : <><Route size={16} /> Rutas Reales (OSRM)</>}
+        </button>
+        <button 
           onClick={() => exportResultsToExcel(drivers, zoneResults)}
           className="btn-success btn-sm flex items-center gap-2"
         >
@@ -134,10 +141,18 @@ export const Step3Results = () => {
             <MapWrapper center={[startLat, startLon]} zoom={12}>
                {Object.entries(zoneResults).map(([name, result], idx) => {
                  const color = getColor(idx);
-                 const latlngs = [[startLat, startLon], ...result.ordered.map(c => [c.lat, c.lng])];
+                 const hasRoad = !!result.roadGeometry;
+                 const latlngs = hasRoad ? result.roadGeometry : [[startLat, startLon], ...result.ordered.map(c => [c.lat, c.lng])];
+                 
                  return (
                    <React.Fragment key={name}>
-                     <Polyline positions={latlngs as any} color={color} weight={3} opacity={0.7} />
+                     <Polyline 
+                      positions={latlngs as any} 
+                      color={color} 
+                      weight={hasRoad ? 5 : 3} 
+                      opacity={hasRoad ? 0.9 : 0.7} 
+                      dashArray={hasRoad ? undefined : '5, 10'}
+                     />
                      {result.ordered.map((c, i) => (
                        <Marker 
                         key={i} 
@@ -203,13 +218,16 @@ export const Step3Results = () => {
               <tbody className="divide-y divide-[var(--border)]">
                 {Object.entries(zoneResults).map(([name, res], i) => {
                   const driver = drivers.find(d => d.zones.includes(name));
-                  const saving = Math.max(0, res.unoptimizedKm - (res.totalKm + res.returnKm));
+                  const currentKm = res.totalKmReal || (res.totalKm + res.returnKm);
+                  const saving = Math.max(0, res.unoptimizedKm - currentKm);
                   return (
                     <tr key={name} className="hover:bg-[var(--card)] transition-colors">
                       <td className="px-6 py-4 font-bold text-white">{name}</td>
                       <td className="px-6 py-4 text-[var(--text-muted)]">{driver?.name}</td>
                       <td className="px-6 py-4 text-[var(--text-muted)]">{res.ordered.length}</td>
-                      <td className="px-6 py-4 font-bold text-[var(--cyan)]">{rd(res.totalKm + res.returnKm, 1)} km</td>
+                      <td className="px-6 py-4 font-bold text-[var(--cyan)]">
+                        {rd(currentKm, 1)} km {res.totalKmReal && '🛣️'}
+                      </td>
                       <td className="px-6 py-4 text-[var(--green)] font-bold">+{rd(saving, 1)} km</td>
                     </tr>
                   );

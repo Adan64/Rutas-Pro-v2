@@ -47,6 +47,7 @@ interface AppState {
   setSelectedIndices: (indices: Set<number>) => void;
   assignToZone: (zoneName: string) => void;
   calculate: () => Promise<void>;
+  calculateOSRM: () => Promise<void>;
   reset: () => void;
 }
 
@@ -143,6 +144,45 @@ export const useRutasStore = create<AppState>((set, get) => ({
     await new Promise((r) => setTimeout(r, 800));
 
     set({ zoneResults: results, drivers, currentStep: 3, isCalculating: false });
+  },
+
+  calculateOSRM: async () => {
+    const { zoneResults, startLat, startLon, drivers } = get();
+    const { fetchOSRMRoute } = await import('../lib/services/OSRMService');
+    
+    set({ isCalculating: true });
+
+    const updatedZoneResults = { ...zoneResults };
+    const updatedDrivers = [...drivers];
+
+    for (const [name, result] of Object.entries(zoneResults)) {
+      const points: [number, number][] = [
+        [startLat, startLon],
+        ...result.ordered.map(c => [c.lat, c.lng] as [number, number]),
+        [startLat, startLon] // Return to depot
+      ];
+
+      const osrmData = await fetchOSRMRoute(points);
+      if (osrmData) {
+        updatedZoneResults[name] = {
+          ...result,
+          roadGeometry: osrmData.geometry,
+          totalKmReal: osrmData.distance / 1000,
+          totalMinReal: osrmData.duration / 60,
+        };
+
+        // Update driver stats
+        const driverIdx = updatedDrivers.findIndex(d => d.zones.includes(name));
+        if (driverIdx !== -1) {
+          updatedDrivers[driverIdx] = {
+            ...updatedDrivers[driverIdx],
+            totalKm: updatedDrivers[driverIdx].totalKm - (result.totalKm + result.returnKm) + (osrmData.distance / 1000)
+          };
+        }
+      }
+    }
+
+    set({ zoneResults: updatedZoneResults, drivers: updatedDrivers, isCalculating: false });
   },
 
   reset: () => set(DEFAULT_STATE),

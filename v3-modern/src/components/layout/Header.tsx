@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck } from 'lucide-react';
+import { Truck, RotateCcw } from 'lucide-react';
 import { useRutasStore } from '@/store/useRutasStore';
 
 export const Header = () => {
@@ -26,10 +26,19 @@ export const Header = () => {
         </div>
 
         {hasData && (
-          <div className="hidden items-center gap-2 sm:flex">
-            <Pill color="blue">{rawClients.length} clientes</Pill>
-            <Pill color="purple">{Object.keys(zones).length} zonas</Pill>
-            <Pill color="green">{numDrivers} repartidores</Pill>
+          <div className="flex items-center gap-4">
+            <div className="hidden items-center gap-2 sm:flex">
+              <Pill color="blue">{rawClients.length} clientes</Pill>
+              <Pill color="purple">{Object.keys(zones).length} zonas</Pill>
+              <Pill color="green">{numDrivers} repartidores</Pill>
+            </div>
+            <button 
+              onClick={() => { if(confirm('¿Reiniciar todo?')) useRutasStore.getState().reset() }}
+              className="group flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--text-faint)] transition-all hover:border-red-500/50 hover:text-red-400"
+              title="Reiniciar aplicación"
+            >
+              <RotateCcw size={16} className="group-hover:rotate-[-45deg] transition-transform" />
+            </button>
           </div>
         )}
       </div>

@@ -21,6 +21,7 @@ import L from 'leaflet';
 import { rd } from '@/lib/routing/RouteEngine';
 import { exportResultsToExcel } from '@/lib/services/ExcelService';
 import { exportResultsToPdf } from '@/lib/services/PdfService';
+import { ResultsDashboard } from '../results/ResultsDashboard';
 
 const TABS = [
   { id: 'map', label: 'Mapa', icon: MapIcon },
@@ -238,9 +239,7 @@ export const Step3Results = () => {
         )}
 
         {activeTab === 'dashboard' && (
-           <div className="flex h-full items-center justify-center text-[var(--text-faint)] italic">
-             Dashboard con gráficos (En desarrollo...)
-           </div>
+           <ResultsDashboard drivers={drivers} zoneResults={zoneResults} />
         )}
       </div>
     </motion.div>

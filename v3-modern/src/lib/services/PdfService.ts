@@ -21,10 +21,10 @@ export function exportResultsToPdf(drivers: any[], zoneResults: Record<string, a
 
   // Stats Box
   doc.setFillColor(26, 34, 53);
-  doc.roundedRect(140, 10, 56, 20, 3, 3, 'F');
+  doc.roundedRect(130, 10, 66, 20, 3, 3, 'F');
   doc.setFontSize(8);
-  doc.text(`KM Totales: ${rd(stats.totKm, 1)} km`, 145, 17);
-  doc.text(`Ahorro Est.: ${rd(stats.savedKm, 1)} km`, 145, 24);
+  doc.text(`KM Totales: ${rd(stats.totKm, 1)} km`, 135, 17);
+  doc.text(`Ahorro Est.: ${rd(stats.savedKm, 1)} km`, 135, 24);
 
   let currentY = 50;
 
@@ -57,14 +57,14 @@ export function exportResultsToPdf(drivers: any[], zoneResults: Record<string, a
           c.NOMBRE_CLIENTE,
           zoneName,
           c.DESCRIPCION,
-          `${c.LEG_KM} km`
+          c.LEG_KM_REAL != null ? `${rd(c.LEG_KM_REAL, 1)} km *` : `${c.LEG_KM} km`
         ]);
       });
     });
 
     autoTable(doc, {
       startY: currentY,
-      head: [['#', 'ID', 'Cliente', 'Zona', 'Descripción', 'Tramo']],
+      head: [['#', 'ID', 'Cliente', 'Zona', 'Descripción', 'Distancia']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
@@ -73,9 +73,17 @@ export function exportResultsToPdf(drivers: any[], zoneResults: Record<string, a
         0: { cellWidth: 8 },
         1: { cellWidth: 15 },
         3: { cellWidth: 20 },
-        5: { cellWidth: 15, halign: 'right' }
+        5: { cellWidth: 22, halign: 'right' }
       },
-      margin: { left: 14, right: 14 }
+      margin: { left: 14, right: 14 },
+      didDrawPage: (data) => {
+        // Add note about OSRM
+        if (data.pageCount === doc.internal.getNumberOfPages()) {
+             doc.setFontSize(7);
+             doc.setTextColor(100);
+             doc.text('* Indica distancia real por carretera (OSRM)', 14, (doc as any).internal.pageSize.height - 15);
+        }
+      }
     });
 
     currentY = (doc as any).lastAutoTable.finalY + 15;

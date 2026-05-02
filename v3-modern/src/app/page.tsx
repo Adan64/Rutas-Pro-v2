@@ -5,6 +5,7 @@ import { StepsBar } from "@/components/layout/StepsBar";
 import { Step1Upload } from "@/components/steps/Step1Upload";
 import { Step2Config } from "@/components/steps/Step2Config";
 import { Step3Results } from "@/components/steps/Step3Results";
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { useRutasStore } from "@/store/useRutasStore";
 
 export default function Home() {
@@ -22,6 +23,8 @@ export default function Home() {
           {currentStep === 3 && <Step3Results />}
         </div>
       </main>
+
+      <LoadingOverlay />
     </div>
   );
 }

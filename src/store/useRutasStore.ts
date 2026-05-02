@@ -24,7 +24,7 @@ const ZONE_PALETTE = [
   '#c084fc', // purple-400
   '#2dd4bf', // teal-400
 ];
-
+console.log('hola');
 /** Returns a palette color for a given zone index (cycles if > 20 zones) */
 const pickZoneColor = (idx: number): string => ZONE_PALETTE[idx % ZONE_PALETTE.length];
 

@@ -20,6 +20,7 @@ import {
 import { useRutasStore } from '@/store/useRutasStore';
 import { MapWrapper } from '../map/MapWrapper';
 import { MapTypeSwitcher } from '../map/MapTypeSwitcher';
+import { ZoneModal } from '../ui/ZoneModal';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { isPointInLayer } from '@/lib/utils/geo';
@@ -38,6 +39,7 @@ export const Step2Config = () => {
   const [activeMapType, setActiveMapType] = useState('dark');
   const [mapTileUrl, setMapTileUrl] = useState('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
   const [showFloatingZones, setShowFloatingZones] = useState(false);
+  const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -65,8 +67,13 @@ export const Step2Config = () => {
   };
 
   const handleAssignToNewZone = () => {
-    const name = prompt('Nombre de la nueva zona:', `Zona ${Object.keys(zones).length + 1}`);
-    if (name) assignToZone(name.trim());
+    setIsZoneModalOpen(true);
+  };
+
+  const handleConfirmZone = (name: string) => {
+    assignToZone(name.trim());
+    setIsZoneModalOpen(false);
+    setSelectedIndices(new Set());
   };
 
   const handleClearSelection = () => {
@@ -460,18 +467,19 @@ export const Step2Config = () => {
                   onClick={handleAssignToNewZone}
                   className="text-sm font-bold text-[var(--accent-hover)] hover:underline whitespace-nowrap"
                 >
-                  + Nueva Zona
-                </button>
-                <button 
-                  onClick={() => {/* TODO: Open Modal with existing zones */}}
-                  className="text-sm font-bold text-[var(--text-muted)] hover:underline whitespace-nowrap"
-                >
-                  Añadir a...
+                  + Asignar a Nueva Zona
                 </button>
               </motion.div>
             </div>
           )}
         </AnimatePresence>
+
+        <ZoneModal 
+          isOpen={isZoneModalOpen}
+          onClose={() => setIsZoneModalOpen(false)}
+          onConfirm={handleConfirmZone}
+          count={selectedIndices.size}
+        />
       </div>
     </motion.div>
   );

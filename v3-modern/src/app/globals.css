@@ -78,3 +78,41 @@
   color: var(--foreground) !important;
   border: 1px solid var(--border) !important;
 }
+
+/* Unified Leaflet Buttons */
+.leaflet-bar {
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+.leaflet-bar a {
+  background-color: var(--surface) !important;
+  color: white !important;
+  border-bottom: 1px solid var(--border) !important;
+  width: 40px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  transition: all 0.2s;
+}
+.leaflet-bar a:hover {
+  background-color: var(--card) !important;
+  color: var(--accent) !important;
+}
+.leaflet-draw-toolbar a {
+  background-image: none !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.leaflet-draw-draw-rectangle::before { content: '⬜'; }
+.leaflet-draw-draw-polygon::before { content: '⬢'; }
+.leaflet-draw-actions {
+  left: 45px !important;
+}
+.leaflet-draw-actions li a {
+  background-color: var(--card) !important;
+  line-height: 28px !important;
+  height: 28px !important;
+}

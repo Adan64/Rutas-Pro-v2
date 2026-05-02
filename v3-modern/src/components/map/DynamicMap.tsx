@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { 
   MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, 
-  FeatureGroup 
+  FeatureGroup, ZoomControl
 } from 'react-leaflet';
 import L from 'leaflet';
 import { EditControl } from 'react-leaflet-draw';
@@ -60,8 +60,10 @@ export const DynamicMap = ({ center, zoom, tileUrl, onMapClick, onSelectionCreat
         zoom={zoom} 
         className="h-full w-full outline-none"
         scrollWheelZoom={true}
+        zoomControl={false}
         ref={mapRef}
       >
+        <ZoomControl position="bottomright" />
         <TileLayer
           url={tileUrl || "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"}
           attribution='&copy; OpenStreetMap'

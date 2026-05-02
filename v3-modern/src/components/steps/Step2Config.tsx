@@ -42,6 +42,7 @@ export const Step2Config = () => {
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
 
   const handleMapClick = (lat: number, lng: number) => {
     if (isSelectionMode) return; // Don't move start point in selection mode
@@ -278,8 +279,19 @@ export const Step2Config = () => {
             ) : (
               Object.entries(zones).map(([name, clients]) => {
                 const config = zoneConfigs[name] || { color: '#6366f1', icon: '📍' };
+                const isHovered = hoveredZone === name;
                 return (
-                  <div key={name} className="group relative flex flex-col gap-3 rounded-xl bg-[var(--card)] p-3 border border-[var(--border)] transition-all hover:border-[var(--accent)]/50 hover:bg-[var(--card2)]">
+                  <div
+                    key={name}
+                    onMouseEnter={() => setHoveredZone(name)}
+                    onMouseLeave={() => setHoveredZone(null)}
+                    className="group relative flex flex-col gap-3 rounded-xl bg-[var(--card)] p-3 border transition-all cursor-default"
+                    style={{
+                      borderColor: isHovered ? config.color : 'var(--border)',
+                      boxShadow: isHovered ? `0 0 0 1px ${config.color}55, 0 4px 20px ${config.color}22` : 'none',
+                      background: isHovered ? `color-mix(in srgb, ${config.color} 8%, var(--card))` : 'var(--card)',
+                    }}
+                  >
                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                            <div 
@@ -359,9 +371,25 @@ export const Step2Config = () => {
 
           {rawClients.map((client, i) => {
             const isSelected = selectedIndices.has(i);
+            const isHoveredZone = hoveredZone !== null && client.ZONA === hoveredZone;
             const config = zoneConfigs[client.ZONA || ''] || { color: '#94a3b8' };
-            const color = isSelected ? '#ffffff' : (client.ZONA ? config.color : '#64748b');
-            
+            const baseColor = client.ZONA ? config.color : '#64748b';
+
+            // Sizes: normal=10, selected=16, hovered-zone=14
+            const size = isSelected ? 16 : isHoveredZone ? 14 : 10;
+            const half = size / 2;
+
+            let html: string;
+            if (isSelected) {
+              // White ring + zone color fill so it's clearly selected but keeps its color
+              html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${baseColor};border:3px solid white;box-shadow:0 0 0 2px ${baseColor},0 0 12px ${baseColor}99;"></div>`;
+            } else if (isHoveredZone) {
+              // Pulsing glow ring in zone color
+              html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${baseColor};border:2px solid white;box-shadow:0 0 0 3px ${baseColor}88,0 0 16px ${baseColor}cc;"></div>`;
+            } else {
+              html = `<div style="background:${baseColor};width:${size}px;height:${size}px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,0.5)"></div>`;
+            }
+
             return (
               <Marker 
                 key={i} 
@@ -370,10 +398,10 @@ export const Step2Config = () => {
                   click: () => handlePointClick(i)
                 }}
                 icon={L.divIcon({
-                  className: `transition-all duration-300 ${isSelected ? 'scale-150' : ''}`,
-                  html: `<div style="background:${color};width:10px;height:10px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,0.5)"></div>`,
-                  iconSize: [10, 10],
-                  iconAnchor: [5, 5]
+                  className: '',
+                  html,
+                  iconSize: [size, size],
+                  iconAnchor: [half, half]
                 })}
               >
                 {!isSelectionMode && (

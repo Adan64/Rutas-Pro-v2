@@ -93,3 +93,51 @@ export function downloadTemplate() {
   XLSX.utils.book_append_sheet(wb, ws, 'Planilla Base');
   XLSX.writeFile(wb, 'rutaspro_planilla_base.xlsx');
 }
+
+export function exportResultsToExcel(drivers: any[], zoneResults: Record<string, any>) {
+  const wb = XLSX.utils.book_new();
+
+  // 1. Resumen General
+  const summaryRows = drivers.map(d => ({
+    'Repartidor': d.name,
+    'Zonas': d.zones.join(', '),
+    'Clientes Totales': d.totalClients,
+    'KM Estimados': rd(d.totalKm, 1)
+  }));
+  const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
+
+  // 2. Detalle por Repartidor
+  drivers.forEach(driver => {
+    const driverRows: any[] = [];
+    driver.zones.forEach((zoneName: string) => {
+      const result = zoneResults[zoneName];
+      if (!result) return;
+
+      result.ordered.forEach((c: any) => {
+        driverRows.push({
+          'Zona': zoneName,
+          'Orden': c.ORDER,
+          'Cliente ID': c.CLIENTE,
+          'Nombre': c.NOMBRE_CLIENTE,
+          'Razon Social': c.RAZON_SOCIAL,
+          'Descripción': c.DESCRIPCION,
+          'KM Tramo': c.LEG_KM,
+          'KM Acumulado': c.CUM_KM,
+          'Latitud': c.lat,
+          'Longitud': c.lng
+        });
+      });
+    });
+
+    const wsDriver = XLSX.utils.json_to_sheet(driverRows);
+    XLSX.utils.book_append_sheet(wb, wsDriver, driver.name.substring(0, 31));
+  });
+
+  XLSX.writeFile(wb, `RutasPro_Optimizado_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function rd(n: number, d: number): number {
+  const factor = Math.pow(10, d);
+  return Math.round(n * factor) / factor;
+}

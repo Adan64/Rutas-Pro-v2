@@ -20,6 +20,7 @@ import { useRutasStore } from '@/store/useRutasStore';
 import { MapWrapper } from '../map/MapWrapper';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import { isPointInLayer } from '@/lib/utils/geo';
 
 export const Step2Config = () => {
   const { 
@@ -28,13 +29,42 @@ export const Step2Config = () => {
     fuelL100, fuelPrice,
     startTime, workHours, serviceTime, lunchMin,
     updateConfig, setStep, calculate, isCalculating,
-    zones, rawClients
+    zones, rawClients,
+    selectedIndices, setSelectedIndices, isSelectionMode, toggleSelectionMode, assignToZone
   } = useRutasStore();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleMapClick = (lat: number, lng: number) => {
+    if (isSelectionMode) return; // Don't move start point in selection mode
     setStartPoint(lat, lng);
+  };
+
+  const handleSelectionCreated = (layer: any) => {
+    const newSelection = new Set(selectedIndices);
+    rawClients.forEach((client, idx) => {
+      if (isPointInLayer(client.lat, client.lng, layer)) {
+        newSelection.add(idx);
+      }
+    });
+    setSelectedIndices(newSelection);
+  };
+
+  const handlePointClick = (idx: number) => {
+    if (!isSelectionMode) return;
+    const newSelection = new Set(selectedIndices);
+    if (newSelection.has(idx)) newSelection.delete(idx);
+    else newSelection.add(idx);
+    setSelectedIndices(newSelection);
+  };
+
+  const handleAssignToNewZone = () => {
+    const name = prompt('Nombre de la nueva zona:', `Zona ${Object.keys(zones).length + 1}`);
+    if (name) assignToZone(name.trim());
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIndices(new Set());
   };
 
   const startIcon = L.divIcon({
@@ -223,6 +253,8 @@ export const Step2Config = () => {
           center={[startLat, startLon]} 
           zoom={13} 
           onMapClick={handleMapClick}
+          onSelectionCreated={handleSelectionCreated}
+          isSelectionMode={isSelectionMode}
         >
           <Marker position={[startLat, startLon]} icon={startIcon}>
             <Popup>
@@ -230,52 +262,88 @@ export const Step2Config = () => {
             </Popup>
           </Marker>
 
-          {rawClients.map((client, i) => (
-            <Marker 
-              key={i} 
-              position={[client.lat, client.lng]}
-              icon={L.divIcon({
-                className: '',
-                html: `<div style="background:${client.ZONA ? '#6366f1' : '#94a3b8'};width:10px;height:10px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,0.5)"></div>`,
-                iconSize: [10, 10],
-                iconAnchor: [5, 5]
-              })}
-            >
-              <Popup>
-                <div className="space-y-1">
-                  <div className="font-bold">{client.CLIENTE}</div>
-                  <div className="text-[10px] text-[var(--text-faint)]">{client.NOMBRE_CLIENTE}</div>
-                  <div className="text-[10px] font-bold text-[var(--accent)]">Zona: {client.ZONA}</div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          {rawClients.map((client, i) => {
+            const isSelected = selectedIndices.has(i);
+            const color = isSelected ? '#6366f1' : (client.ZONA ? '#3b82f6' : '#94a3b8');
+            return (
+              <Marker 
+                key={i} 
+                position={[client.lat, client.lng]}
+                eventHandlers={{
+                  click: () => handlePointClick(i)
+                }}
+                icon={L.divIcon({
+                  className: `transition-all duration-300 ${isSelected ? 'scale-150' : ''}`,
+                  html: `<div style="background:${color};width:10px;height:10px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,0.5)"></div>`,
+                  iconSize: [10, 10],
+                  iconAnchor: [5, 5]
+                })}
+              >
+                {!isSelectionMode && (
+                  <Popup>
+                    <div className="space-y-1">
+                      <div className="font-bold">{client.CLIENTE}</div>
+                      <div className="text-[10px] text-[var(--text-faint)]">{client.NOMBRE_CLIENTE}</div>
+                      <div className="text-[10px] font-bold text-[var(--accent)]">Zona: {client.ZONA}</div>
+                    </div>
+                  </Popup>
+                )}
+              </Marker>
+            );
+          })}
         </MapWrapper>
 
         {/* FLOATING TOOLS */}
         <div className="absolute right-4 top-4 z-[500] flex flex-col gap-2">
           <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md shadow-xl">
-             <button className="flex h-10 w-10 items-center justify-center text-white hover:bg-[var(--card)] border-b border-[var(--border)]" title="Selección manual">📍</button>
-             <button className="flex h-10 w-10 items-center justify-center text-white hover:bg-[var(--card)] border-b border-[var(--border)]" title="Dibujar Polígono">✏️</button>
-             <button className="flex h-10 w-10 items-center justify-center text-white hover:bg-[var(--card)]" title="Borrar selección">🗑️</button>
+             <button 
+              onClick={toggleSelectionMode}
+              className={`flex h-10 w-10 items-center justify-center text-white transition-colors border-b border-[var(--border)] ${isSelectionMode ? 'bg-[var(--accent)]' : 'hover:bg-[var(--card)]'}`} 
+              title="Selección manual"
+            >
+              📍
+            </button>
+             <button className="flex h-10 w-10 items-center justify-center text-white hover:bg-[var(--card)] border-b border-[var(--border)]" title="Dibujar Polígono (Usar controles de Leaflet Draw)">✏️</button>
+             <button 
+              onClick={handleClearSelection}
+              className="flex h-10 w-10 items-center justify-center text-white hover:bg-red-500/20" 
+              title="Borrar selección"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
-          <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md text-white shadow-xl hover:bg-[var(--card)]">
-            <Maximize2 size={18} />
-          </button>
         </div>
 
         {/* SELECTION PILL */}
-        <div className="absolute bottom-8 left-1/2 z-[500] -translate-x-1/2 transform">
-          <motion.div 
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            className="flex items-center gap-4 rounded-full border border-[var(--accent)] bg-[var(--surface)]/90 px-6 py-3 shadow-2xl backdrop-blur-xl"
-          >
-            <span className="text-sm font-bold text-white">0 seleccionados</span>
-            <div className="h-4 w-px bg-[var(--border)]" />
-            <button className="text-sm font-bold text-[var(--accent-hover)] hover:underline">+ Nueva Zona</button>
-          </motion.div>
-        </div>
+        <AnimatePresence>
+          {selectedIndices.size > 0 && (
+            <div className="absolute bottom-8 left-1/2 z-[500] -translate-x-1/2 transform">
+              <motion.div 
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                className="flex items-center gap-4 rounded-full border border-[var(--accent)] bg-[var(--surface)]/90 px-6 py-3 shadow-2xl backdrop-blur-xl"
+              >
+                <span className="text-sm font-bold text-white whitespace-nowrap">
+                  {selectedIndices.size} seleccionados
+                </span>
+                <div className="h-4 w-px bg-[var(--border)]" />
+                <button 
+                  onClick={handleAssignToNewZone}
+                  className="text-sm font-bold text-[var(--accent-hover)] hover:underline whitespace-nowrap"
+                >
+                  + Nueva Zona
+                </button>
+                <button 
+                  onClick={() => {/* TODO: Open Modal with existing zones */}}
+                  className="text-sm font-bold text-[var(--text-muted)] hover:underline whitespace-nowrap"
+                >
+                  Añadir a...
+                </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

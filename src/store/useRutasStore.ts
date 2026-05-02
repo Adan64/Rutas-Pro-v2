@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Client, RouteResult } from '../lib/routing/RouteEngine';
+import { Client, RouteResult, nearestNeighbor } from '../lib/routing/RouteEngine';
 
 // Curated palette of 20 visually distinct colors for zone auto-assignment
 const ZONE_PALETTE = [
@@ -85,7 +85,27 @@ interface AppState {
   reset: () => void;
 }
 
-const DEFAULT_STATE = {
+const DEFAULT_STATE: {
+  rawClients: Client[];
+  zones: Record<string, Client[]>;
+  zoneConfigs: Record<string, ZoneConfig>;
+  filename: string | null;
+  startLat: number;
+  startLon: number;
+  numDrivers: number;
+  fuelL100: number;
+  fuelPrice: number;
+  startTime: string;
+  serviceTime: number;
+  workHours: number;
+  lunchMin: number;
+  drivers: Driver[];
+  zoneResults: Record<string, RouteResult>;
+  currentStep: number;
+  isCalculating: boolean;
+  selectedIndices: Set<number>;
+  isSelectionMode: boolean;
+} = {
   rawClients: [],
   zones: {},
   zoneConfigs: {},
@@ -103,7 +123,7 @@ const DEFAULT_STATE = {
   zoneResults: {},
   currentStep: 1,
   isCalculating: false,
-  selectedIndices: new Set(),
+  selectedIndices: new Set<number>(),
   isSelectionMode: false,
 };
 
@@ -174,7 +194,7 @@ export const useRutasStore = create<AppState>((set, get) => ({
       rawClients: updatedClients, 
       zones: newZones, 
       zoneConfigs: updatedConfigs,
-      selectedIndices: new Set() 
+      selectedIndices: new Set<number>() 
     };
   }),
 
@@ -185,7 +205,6 @@ export const useRutasStore = create<AppState>((set, get) => ({
     // 1. Optimize Each Zone
     const results: Record<string, RouteResult> = {};
     Object.entries(zones).forEach(([name, clients]) => {
-      const { nearestNeighbor } = require('../lib/routing/RouteEngine');
       results[name] = nearestNeighbor(clients, startLat, startLon);
     });
 

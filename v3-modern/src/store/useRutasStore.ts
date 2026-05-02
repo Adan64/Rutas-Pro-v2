@@ -10,10 +10,16 @@ interface Driver {
   startLon: number;
 }
 
+interface ZoneConfig {
+  color: string;
+  icon: string;
+}
+
 interface AppState {
   // Data
   rawClients: Client[];
   zones: Record<string, Client[]>;
+  zoneConfigs: Record<string, ZoneConfig>;
   filename: string | null;
 
   // Config
@@ -43,6 +49,7 @@ interface AppState {
   setNumDrivers: (n: number) => void;
   setStep: (n: number) => void;
   updateConfig: (updates: Partial<Omit<AppState, 'actions'>>) => void;
+  updateZoneConfig: (name: string, updates: Partial<ZoneConfig>) => void;
   toggleSelectionMode: () => void;
   setSelectedIndices: (indices: Set<number>) => void;
   assignToZone: (zoneName: string) => void;
@@ -54,6 +61,7 @@ interface AppState {
 const DEFAULT_STATE = {
   rawClients: [],
   zones: {},
+  zoneConfigs: {},
   filename: null,
   startLat: -25.374708,
   startLon: -55.719584,
@@ -85,6 +93,13 @@ export const useRutasStore = create<AppState>((set, get) => ({
   setStep: (n) => set({ currentStep: n }),
 
   updateConfig: (updates) => set((state) => ({ ...state, ...updates })),
+
+  updateZoneConfig: (name, updates) => set((state) => ({
+    zoneConfigs: {
+      ...state.zoneConfigs,
+      [name]: { ...(state.zoneConfigs[name] || { color: '#6366f1', icon: '📍' }), ...updates }
+    }
+  })),
 
   toggleSelectionMode: () => set((state) => ({ isSelectionMode: !state.isSelectionMode })),
 

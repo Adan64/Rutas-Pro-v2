@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { 
   MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, 
-  FeatureGroup, LayersControl 
+  FeatureGroup 
 } from 'react-leaflet';
 import L from 'leaflet';
 import { EditControl } from 'react-leaflet-draw';
@@ -22,6 +22,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface MapProps {
   center: [number, number];
   zoom: number;
+  tileUrl?: string;
   onMapClick?: (lat: number, lng: number) => void;
   onSelectionCreated?: (layer: any) => void;
   isSelectionMode?: boolean;
@@ -45,7 +46,7 @@ const ChangeView = ({ center, zoom }: { center: [number, number]; zoom: number }
   return null;
 };
 
-export const DynamicMap = ({ center, zoom, onMapClick, onSelectionCreated, isSelectionMode, children }: MapProps) => {
+export const DynamicMap = ({ center, zoom, tileUrl, onMapClick, onSelectionCreated, isSelectionMode, children }: MapProps) => {
   const mapRef = useRef<L.Map>(null);
 
   const onCreated = (e: any) => {
@@ -61,38 +62,10 @@ export const DynamicMap = ({ center, zoom, onMapClick, onSelectionCreated, isSel
         scrollWheelZoom={true}
         ref={mapRef}
       >
-        <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="Modo Oscuro (CartoDB)">
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              attribution='&copy; CARTO'
-            />
-          </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Modo Claro (CartoDB)">
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-              attribution='&copy; CARTO'
-            />
-          </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Satélite (Google)">
-            <TileLayer
-              url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
-              attribution='&copy; Google'
-            />
-          </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Calles (Google)">
-            <TileLayer
-              url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-              attribution='&copy; Google'
-            />
-          </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Terreno (Google)">
-            <TileLayer
-              url="https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}"
-              attribution='&copy; Google'
-            />
-          </LayersControl.BaseLayer>
-        </LayersControl>
+        <TileLayer
+          url={tileUrl || "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"}
+          attribution='&copy; OpenStreetMap'
+        />
         
         <FeatureGroup>
           <EditControl

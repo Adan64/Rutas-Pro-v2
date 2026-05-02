@@ -14,10 +14,12 @@ import {
   Trash2,
   Maximize2,
   Minus,
-  Plus
+  Plus,
+  Route
 } from 'lucide-react';
 import { useRutasStore } from '@/store/useRutasStore';
 import { MapWrapper } from '../map/MapWrapper';
+import { MapTypeSwitcher } from '../map/MapTypeSwitcher';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { isPointInLayer } from '@/lib/utils/geo';
@@ -29,9 +31,13 @@ export const Step2Config = () => {
     fuelL100, fuelPrice,
     startTime, workHours, serviceTime, lunchMin,
     updateConfig, setStep, calculate, isCalculating,
-    zones, rawClients,
+    zones, rawClients, zoneConfigs, updateZoneConfig,
     selectedIndices, setSelectedIndices, isSelectionMode, toggleSelectionMode, assignToZone
   } = useRutasStore();
+
+  const [activeMapType, setActiveMapType] = useState('dark');
+  const [mapTileUrl, setMapTileUrl] = useState('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+  const [showFloatingZones, setShowFloatingZones] = useState(false);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -240,7 +246,7 @@ export const Step2Config = () => {
         )}
 
         {/* ZONE SUMMARY (NEW) */}
-        <div className="card-premium flex-1 overflow-y-auto">
+        <div className="card-premium flex-1 overflow-hidden flex flex-col">
           <div className="mb-4 flex items-center justify-between border-b border-[var(--border)] pb-3">
              <div className="flex items-center gap-2">
                 <Route className="text-[var(--cyan)]" size={18} />
@@ -248,26 +254,50 @@ export const Step2Config = () => {
              </div>
              <span className="text-[10px] font-bold text-[var(--text-faint)] uppercase">{Object.keys(zones).length} Zonas</span>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3 overflow-y-auto pr-2">
             {Object.entries(zones).length === 0 ? (
               <div className="py-8 text-center text-xs text-[var(--text-faint)] italic">
                 No hay zonas asignadas aún.<br/>Usá las herramientas del mapa.
               </div>
             ) : (
-              Object.entries(zones).map(([name, clients]) => (
-                <div key={name} className="flex items-center justify-between rounded-lg bg-[var(--card)] p-2 border border-[var(--border)]">
-                   <div className="flex flex-col">
-                      <span className="text-xs font-bold text-white">{name}</span>
-                      <span className="text-[10px] text-[var(--text-faint)]">{clients.length} clientes</span>
-                   </div>
-                   <button 
-                    onClick={() => {/* TODO: Focus zone on map */}}
-                    className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-[var(--surface)] text-[var(--text-faint)] hover:text-white"
-                   >
-                     <ChevronRight size={14} />
-                   </button>
-                </div>
-              ))
+              Object.entries(zones).map(([name, clients]) => {
+                const config = zoneConfigs[name] || { color: '#6366f1', icon: '📍' };
+                return (
+                  <div key={name} className="group flex flex-col gap-3 rounded-xl bg-[var(--card)] p-3 border border-[var(--border)] transition-all hover:border-[var(--border2)]">
+                     <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                           <div 
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-lg shadow-inner"
+                            style={{ backgroundColor: `${config.color}20`, color: config.color }}
+                           >
+                             {config.icon}
+                           </div>
+                           <div className="flex flex-col">
+                              <span className="text-sm font-bold text-white">{name}</span>
+                              <span className="text-[10px] text-[var(--text-faint)]">{clients.length} clientes</span>
+                           </div>
+                        </div>
+                        <input 
+                          type="color" 
+                          value={config.color}
+                          onChange={(e) => updateZoneConfig(name, { color: e.target.value })}
+                          className="h-6 w-6 cursor-pointer overflow-hidden rounded-md border-none bg-transparent"
+                        />
+                     </div>
+                     <div className="flex gap-2">
+                        {['📍', '🚚', '🏠', '📦', '⭐'].map(icon => (
+                          <button
+                            key={icon}
+                            onClick={() => updateZoneConfig(name, { icon })}
+                            className={`flex h-7 w-7 items-center justify-center rounded-md text-sm transition-all ${config.icon === icon ? 'bg-[var(--accent)] text-white' : 'bg-[var(--surface)] text-[var(--text-faint)] hover:text-white'}`}
+                          >
+                            {icon}
+                          </button>
+                        ))}
+                     </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -297,6 +327,7 @@ export const Step2Config = () => {
         <MapWrapper 
           center={[startLat, startLon]} 
           zoom={13} 
+          tileUrl={mapTileUrl}
           onMapClick={handleMapClick}
           onSelectionCreated={handleSelectionCreated}
           isSelectionMode={isSelectionMode}
@@ -309,7 +340,9 @@ export const Step2Config = () => {
 
           {rawClients.map((client, i) => {
             const isSelected = selectedIndices.has(i);
-            const color = isSelected ? '#6366f1' : (client.ZONA ? '#3b82f6' : '#94a3b8');
+            const config = zoneConfigs[client.ZONA || ''] || { color: '#94a3b8' };
+            const color = isSelected ? '#ffffff' : (client.ZONA ? config.color : '#64748b');
+            
             return (
               <Marker 
                 key={i} 
@@ -359,10 +392,55 @@ export const Step2Config = () => {
           <button 
             onClick={toggleFullscreen}
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md text-white shadow-xl hover:bg-[var(--card)]"
+            title="Pantalla Completa"
           >
             <Maximize2 size={18} />
           </button>
+          <button 
+            onClick={() => setShowFloatingZones(!showFloatingZones)}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] transition-colors bg-[var(--surface)]/90 backdrop-blur-md text-white shadow-xl ${showFloatingZones ? 'bg-[var(--accent)]' : 'hover:bg-[var(--card)]'}`}
+            title="Resumen de Zonas"
+          >
+            <Route size={18} />
+          </button>
         </div>
+
+        {/* FLOATING RIGHT TOOLS */}
+        <div className="absolute right-4 top-4 z-[500]">
+          <MapTypeSwitcher 
+            activeType={activeMapType} 
+            onTypeChange={(type) => { setActiveMapType(type.id); setMapTileUrl(type.url); }} 
+          />
+        </div>
+
+        {/* FLOATING ZONE OVERLAY (FULLSCREEN FRIENDLY) */}
+        <AnimatePresence>
+          {showFloatingZones && (
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="absolute left-16 top-4 z-[500] w-64 max-h-[80vh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-4 shadow-2xl backdrop-blur-xl"
+            >
+              <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2">
+                <span className="text-xs font-bold text-white uppercase">Zonas</span>
+                <button onClick={() => setShowFloatingZones(false)} className="text-[var(--text-faint)]">✕</button>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(zones).map(([name, clients]) => {
+                  const config = zoneConfigs[name] || { color: '#6366f1', icon: '📍' };
+                  return (
+                    <div key={name} className="flex items-center gap-2 text-xs">
+                      <span style={{ color: config.color }}>{config.icon}</span>
+                      <span className="flex-1 font-bold text-white truncate">{name}</span>
+                      <span className="text-[var(--text-faint)]">{clients.length}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* SELECTION PILL */}
         <AnimatePresence>

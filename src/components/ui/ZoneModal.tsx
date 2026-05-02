@@ -9,10 +9,12 @@ interface ZoneModalProps {
   onClose: () => void;
   onConfirm: (name: string) => void;
   count: number;
+  existingZones?: string[];
 }
 
-export const ZoneModal = ({ isOpen, onClose, onConfirm, count }: ZoneModalProps) => {
+export const ZoneModal = ({ isOpen, onClose, onConfirm, count, existingZones = [] }: ZoneModalProps) => {
   const [name, setName] = useState('');
+  const [isNew, setIsNew] = useState(true);
 
   if (!isOpen) return null;
 
@@ -37,24 +39,56 @@ export const ZoneModal = ({ isOpen, onClose, onConfirm, count }: ZoneModalProps)
               <MapPin size={32} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Nueva Zona</h2>
-              <p className="text-sm text-[var(--text-muted)]">Asignar {count} clientes seleccionados</p>
+              <h2 className="text-xl font-bold text-white">Asignar a Zona</h2>
+              <p className="text-sm text-[var(--text-muted)]">{count} clientes seleccionados</p>
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[var(--text-faint)] uppercase tracking-wider">Nombre de la Zona</label>
-              <input 
-                autoFocus
-                type="text" 
-                placeholder="Ej: Zona Norte, Sector A..." 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => { if(e.key === 'Enter' && name) onConfirm(name); }}
-                className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-white outline-none ring-[var(--accent)]/30 transition-all focus:ring-2 focus:border-[var(--accent)]"
-              />
-            </div>
+            {existingZones.length > 0 && (
+              <div className="flex gap-2 rounded-lg bg-[var(--background)] p-1">
+                <button
+                  onClick={() => setIsNew(true)}
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition-all ${isNew ? 'bg-[var(--surface)] text-white shadow' : 'text-[var(--text-faint)] hover:text-white'}`}
+                >
+                  Nueva
+                </button>
+                <button
+                  onClick={() => setIsNew(false)}
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition-all ${!isNew ? 'bg-[var(--surface)] text-white shadow' : 'text-[var(--text-faint)] hover:text-white'}`}
+                >
+                  Existente
+                </button>
+              </div>
+            )}
+            {isNew || existingZones.length === 0 ? (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[var(--text-faint)] uppercase tracking-wider">Nombre de la Zona</label>
+                <input 
+                  autoFocus
+                  type="text" 
+                  placeholder="Ej: Zona Norte, Sector A..." 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => { if(e.key === 'Enter' && name) onConfirm(name); }}
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-white outline-none ring-[var(--accent)]/30 transition-all focus:ring-2 focus:border-[var(--accent)]"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[var(--text-faint)] uppercase tracking-wider">Seleccionar Zona</label>
+                <select
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-white outline-none ring-[var(--accent)]/30 transition-all focus:ring-2 focus:border-[var(--accent)]"
+                >
+                  <option value="" disabled>Elegir zona...</option>
+                  {existingZones.map(z => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button 

@@ -507,7 +507,7 @@ export const Step2Config = () => {
                   onClick={handleAssignToNewZone}
                   className="text-sm font-bold text-[var(--accent-hover)] hover:underline whitespace-nowrap"
                 >
-                  + Asignar a Nueva Zona
+                  + Asignar a Zona
                 </button>
               </motion.div>
             </div>
@@ -519,6 +519,7 @@ export const Step2Config = () => {
           onClose={() => setIsZoneModalOpen(false)}
           onConfirm={handleConfirmZone}
           count={selectedIndices.size}
+          existingZones={Object.keys(zones)}
         />
       </div>
     </motion.div>

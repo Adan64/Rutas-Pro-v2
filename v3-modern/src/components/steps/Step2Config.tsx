@@ -252,51 +252,63 @@ export const Step2Config = () => {
           </motion.div>
         )}
 
-        {/* ZONE SUMMARY (NEW) */}
-        <div className="card-premium flex-1 overflow-hidden flex flex-col">
+        {/* ZONE SUMMARY (ENHANCED) */}
+        <div className="card-premium flex-[2] overflow-hidden flex flex-col min-h-[300px]">
           <div className="mb-4 flex items-center justify-between border-b border-[var(--border)] pb-3">
              <div className="flex items-center gap-2">
                 <Route className="text-[var(--cyan)]" size={18} />
-                <h3 className="font-bold text-white">Resumen de Zonas</h3>
+                <h3 className="font-bold text-white">Zonas Asignadas</h3>
              </div>
-             <span className="text-[10px] font-bold text-[var(--text-faint)] uppercase">{Object.keys(zones).length} Zonas</span>
+             <div className="flex items-center gap-2">
+                <span className="rounded-full bg-[var(--card)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-hover)] border border-[var(--border)]">
+                  {Object.keys(zones).length} ZONAS
+                </span>
+             </div>
           </div>
-          <div className="space-y-3 overflow-y-auto pr-2">
+          <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
             {Object.entries(zones).length === 0 ? (
-              <div className="py-8 text-center text-xs text-[var(--text-faint)] italic">
-                No hay zonas asignadas aún.<br/>Usá las herramientas del mapa.
+              <div className="flex h-full flex-col items-center justify-center py-10 text-center">
+                <div className="mb-3 rounded-full bg-[var(--card)] p-4 text-[var(--text-faint)]">
+                  <Route size={32} />
+                </div>
+                <p className="text-xs text-[var(--text-faint)] italic">
+                  No hay zonas asignadas aún.<br/>Seleccioná clientes en el mapa para empezar.
+                </p>
               </div>
             ) : (
               Object.entries(zones).map(([name, clients]) => {
                 const config = zoneConfigs[name] || { color: '#6366f1', icon: '📍' };
                 return (
-                  <div key={name} className="group flex flex-col gap-3 rounded-xl bg-[var(--card)] p-3 border border-[var(--border)] transition-all hover:border-[var(--border2)]">
+                  <div key={name} className="group relative flex flex-col gap-3 rounded-xl bg-[var(--card)] p-3 border border-[var(--border)] transition-all hover:border-[var(--accent)]/50 hover:bg-[var(--card2)]">
                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                            <div 
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-lg shadow-inner"
-                            style={{ backgroundColor: `${config.color}20`, color: config.color }}
+                            className="flex h-10 w-10 items-center justify-center rounded-xl text-xl shadow-inner transition-transform group-hover:scale-110"
+                            style={{ backgroundColor: `${config.color}15`, color: config.color, border: `1px solid ${config.color}30` }}
                            >
                              {config.icon}
                            </div>
                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-white">{name}</span>
-                              <span className="text-[10px] text-[var(--text-faint)]">{clients.length} clientes</span>
+                              <span className="text-sm font-bold text-white leading-tight">{name}</span>
+                              <span className="text-[10px] font-medium text-[var(--text-faint)] uppercase tracking-wider">{clients.length} paradas</span>
                            </div>
                         </div>
-                        <input 
-                          type="color" 
-                          value={config.color}
-                          onChange={(e) => updateZoneConfig(name, { color: e.target.value })}
-                          className="h-6 w-6 cursor-pointer overflow-hidden rounded-md border-none bg-transparent"
-                        />
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="color" 
+                            value={config.color}
+                            onChange={(e) => updateZoneConfig(name, { color: e.target.value })}
+                            className="h-6 w-6 cursor-pointer overflow-hidden rounded-md border-none bg-transparent"
+                            title="Cambiar color"
+                          />
+                        </div>
                      </div>
-                     <div className="flex gap-2">
+                     <div className="flex items-center gap-1.5 rounded-lg bg-[var(--background)]/50 p-1">
                         {['📍', '🚚', '🏠', '📦', '⭐'].map(icon => (
                           <button
                             key={icon}
                             onClick={() => updateZoneConfig(name, { icon })}
-                            className={`flex h-7 w-7 items-center justify-center rounded-md text-sm transition-all ${config.icon === icon ? 'bg-[var(--accent)] text-white' : 'bg-[var(--surface)] text-[var(--text-faint)] hover:text-white'}`}
+                            className={`flex h-7 flex-1 items-center justify-center rounded-md text-sm transition-all ${config.icon === icon ? 'bg-[var(--accent)] text-white shadow-lg' : 'text-[var(--text-faint)] hover:bg-[var(--surface)] hover:text-white'}`}
                           >
                             {icon}
                           </button>

@@ -65,6 +65,11 @@ interface AppState {
   zoneResults: Record<string, RouteResult>;
   currentStep: number;
   isCalculating: boolean;
+  osrmProgress: {
+    isVisible: boolean;
+    log: string[];
+    isComplete: boolean;
+  };
 
   // Selection & Editing
   selectedIndices: Set<number>;
@@ -86,7 +91,8 @@ interface AppState {
   updateZoneOrder: (zoneName: string, newOrder: Client[]) => void;
   clearSelection: () => void;
   calculate: () => Promise<void>;
-  calculateOSRM: () => Promise<void>;
+  calculateOSRM: (zoneName?: string) => Promise<void>;
+  closeOsrmProgress: () => void;
   reset: () => void;
 }
 
@@ -128,6 +134,7 @@ const DEFAULT_STATE: {
   zoneResults: {},
   currentStep: 1,
   isCalculating: false,
+  osrmProgress: { isVisible: false, log: [], isComplete: false },
   selectedIndices: new Set<number>(),
   isSelectionMode: false,
   clearSelectionTrigger: 0,
@@ -323,16 +330,31 @@ export const useRutasStore = create<AppState>((set, get) => ({
     set({ zoneResults: results, drivers, currentStep: 3, isCalculating: false });
   },
 
-  calculateOSRM: async () => {
+  calculateOSRM: async (zoneName?: string) => {
     const { zoneResults, startLat, startLon, drivers } = get();
     const { fetchOSRMRoute } = await import('../lib/services/OSRMService');
     
-    set({ isCalculating: true });
+    set({ 
+      isCalculating: true,
+      osrmProgress: { isVisible: true, log: ['Conectando con servidor OSRM...'], isComplete: false }
+    });
 
     const updatedZoneResults = { ...zoneResults };
     const updatedDrivers = [...drivers];
 
-    for (const [name, result] of Object.entries(zoneResults)) {
+    const zonesToProcess = zoneName ? [zoneName] : Object.keys(zoneResults);
+
+    for (const name of zonesToProcess) {
+      const result = zoneResults[name];
+      if (!result) continue;
+
+      set((state) => ({
+        osrmProgress: {
+          ...state.osrmProgress,
+          log: [...state.osrmProgress.log, `Calculando ruta real para: ${name}`]
+        }
+      }));
+
       const points: [number, number][] = [
         [startLat, startLon],
         ...result.ordered.map(c => [c.lat, c.lng] as [number, number]),
@@ -356,11 +378,31 @@ export const useRutasStore = create<AppState>((set, get) => ({
             totalKm: updatedDrivers[driverIdx].totalKm - (result.totalKm + result.returnKm) + (osrmData.distance / 1000)
           };
         }
+      } else {
+         set((state) => ({
+           osrmProgress: {
+             ...state.osrmProgress,
+             log: [...state.osrmProgress.log, `❌ Error obteniendo ruta para: ${name}`]
+           }
+         }));
       }
     }
 
-    set({ zoneResults: updatedZoneResults, drivers: updatedDrivers, isCalculating: false });
+    set((state) => ({ 
+      zoneResults: updatedZoneResults, 
+      drivers: updatedDrivers, 
+      isCalculating: false,
+      osrmProgress: {
+        ...state.osrmProgress,
+        log: [...state.osrmProgress.log, '✅ Cálculo finalizado exitosamente.'],
+        isComplete: true
+      }
+    }));
   },
+
+  closeOsrmProgress: () => set({ 
+    osrmProgress: { isVisible: false, log: [], isComplete: false } 
+  }),
 
   reset: () => set(DEFAULT_STATE),
 }));

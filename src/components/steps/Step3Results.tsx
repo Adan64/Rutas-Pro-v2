@@ -14,10 +14,11 @@ import {
   ChevronRight,
   ChevronDown,
   TrendingDown,
-  Maximize2,
   MessageCircle,
   Pencil,
-  GripVertical
+  GripVertical,
+  X,
+  Loader2
 } from 'lucide-react';
 import { useRutasStore } from '@/store/useRutasStore';
 import { MapWrapper } from '../map/MapWrapper';
@@ -40,7 +41,8 @@ export const Step3Results = () => {
     zoneResults, drivers, startLat, startLon, 
     fuelL100, fuelPrice,
     setStep, calculateOSRM, isCalculating,
-    renameDriver, reorderRoute
+    renameDriver, updateZoneOrder,
+    osrmProgress, closeOsrmProgress
   } = useRutasStore();
   const [activeTab, setActiveTab] = useState('map');
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
@@ -340,7 +342,18 @@ export const Step3Results = () => {
                       {isExpanded && (
                         <tr className="bg-[var(--background)]">
                           <td colSpan={5} className="p-4">
-                            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
+                            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                              <div className="flex justify-between items-center mb-3">
+                                <h4 className="text-[var(--text-faint)] font-bold text-xs uppercase">Detalles de la Zona</h4>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); calculateOSRM(name); }}
+                                  className="flex items-center gap-1 text-[10px] bg-[var(--card)] hover:bg-[var(--accent)] text-white px-2 py-1 rounded transition-colors"
+                                  disabled={isCalculating}
+                                >
+                                  {isCalculating && osrmProgress.isVisible ? <Loader2 size={10} className="animate-spin" /> : <Route size={10} />} 
+                                  Recalcular OSRM
+                                </button>
+                              </div>
                               <table className="w-full text-xs">
                                 <thead className="text-[var(--text-faint)] uppercase">
                                   <tr>
@@ -379,6 +392,65 @@ export const Step3Results = () => {
            <ResultsDashboard drivers={drivers} zoneResults={zoneResults} />
         )}
       </div>
+
+      {/* OSRM PROGRESS MODAL */}
+      {osrmProgress.isVisible && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--card)] p-4">
+              <div className="flex items-center gap-2">
+                {osrmProgress.isComplete ? (
+                  <div className="h-2 w-2 rounded-full bg-[var(--green)]"></div>
+                ) : (
+                  <div className="h-2 w-2 rounded-full bg-[var(--cyan)] animate-pulse"></div>
+                )}
+                <h3 className="font-bold text-white uppercase tracking-wider text-xs">Consola OSRM</h3>
+              </div>
+              {osrmProgress.isComplete && (
+                <button onClick={closeOsrmProgress} className="text-[var(--text-muted)] hover:text-white">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            
+            <div className="p-4 bg-[var(--background)] h-64 overflow-y-auto font-mono text-xs custom-scrollbar">
+              {osrmProgress.log.map((msg, idx) => (
+                <div 
+                  key={idx} 
+                  className={`mb-1 ${
+                    msg.includes('❌') ? 'text-red-400' : 
+                    msg.includes('✅') ? 'text-green-400' : 
+                    'text-[var(--text-muted)]'
+                  }`}
+                >
+                  <span className="opacity-50 mr-2">{'>'}</span>{msg}
+                </div>
+              ))}
+              {!osrmProgress.isComplete && (
+                <div className="flex items-center gap-2 text-[var(--cyan)] mt-4">
+                  <Loader2 size={12} className="animate-spin" />
+                  <span>Procesando...</span>
+                </div>
+              )}
+            </div>
+            
+            {osrmProgress.isComplete && (
+              <div className="border-t border-[var(--border)] p-4 flex justify-end bg-[var(--card)]">
+                <button 
+                  onClick={closeOsrmProgress}
+                  className="rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-bold text-white hover:bg-[var(--accent-hover)] transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };

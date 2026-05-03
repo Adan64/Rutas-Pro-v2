@@ -41,9 +41,14 @@ const MapEvents = ({ onMapClick, isDrawingRef }: { onMapClick?: (lat: number, ln
 
 const ChangeView = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
   const map = useMap();
+  const prevCenterRef = useRef(center);
+  
   useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
+    if (prevCenterRef.current[0] !== center[0] || prevCenterRef.current[1] !== center[1]) {
+      map.setView(center, zoom);
+      prevCenterRef.current = center;
+    }
+  }, [center[0], center[1], zoom, map]); // Use primitive values for dependencies
   return null;
 };
 

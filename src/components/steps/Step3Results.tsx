@@ -42,12 +42,21 @@ export const Step3Results = () => {
     zoneResults, drivers, startLat, startLon, 
     fuelL100, fuelPrice,
     setStep, calculateOSRM, isCalculating,
-    renameDriver, updateZoneOrder,
+    renameDriver, updateZoneOrder, renameZone,
     osrmProgress, closeOsrmProgress
   } = useRutasStore();
   const [activeTab, setActiveTab] = useState('map');
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
+  const [isLegendMinimized, setIsLegendMinimized] = useState(false);
+
+  const handleRenameZone = (oldName: string) => {
+    const newName = window.prompt(`Cambiar nombre de la zona "${oldName}":`, oldName);
+    if (newName) {
+      renameZone(oldName, newName);
+    }
+  };
 
   const toggleFullscreen = () => {
     const mapDiv = document.getElementById('results-map-container');
@@ -192,27 +201,33 @@ export const Step3Results = () => {
             className="relative h-full overflow-hidden rounded-3xl border border-[var(--border)] shadow-2xl bg-[var(--surface)]"
           >
             <MapWrapper center={[startLat, startLon]} zoom={12}>
-               {Object.entries(zoneResults).map(([name, result], idx) => {
+                 {Object.entries(zoneResults).map(([name, result], idx) => {
                  const color = getColor(idx);
                  const hasRoad = !!result.roadGeometry;
                  const latlngs = hasRoad ? result.roadGeometry : [[startLat, startLon], ...result.ordered.map(c => [c.lat, c.lng])];
+                 
+                 const isHovered = hoveredZone === name;
+                 const isDimmed = hoveredZone !== null && !isHovered;
+                 const lineOpacity = isHovered ? 1 : isDimmed ? 0.15 : (hasRoad ? 0.9 : 0.7);
+                 const weight = isHovered ? (hasRoad ? 7 : 5) : (hasRoad ? 5 : 3);
                  
                  return (
                    <React.Fragment key={name}>
                      <Polyline 
                       positions={latlngs as any} 
                       color={color} 
-                      weight={hasRoad ? 5 : 3} 
-                      opacity={hasRoad ? 0.9 : 0.7} 
+                      weight={weight} 
+                      opacity={lineOpacity} 
                       dashArray={hasRoad ? undefined : '5, 10'}
                      />
                      {result.ordered.map((c, i) => (
                        <Marker 
                         key={i} 
                         position={[c.lat, c.lng]}
+                        opacity={isDimmed ? 0.3 : 1}
                         icon={L.divIcon({
                           className: '',
-                          html: `<div style="background:${color};color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.5)">${c.ORDER}</div>`,
+                          html: `<div style="background:${color};color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.5);opacity:${isDimmed ? 0.3 : 1}">${c.ORDER}</div>`,
                           iconSize: [22, 22],
                           iconAnchor: [11, 11]
                         })}
@@ -222,6 +237,48 @@ export const Step3Results = () => {
                  );
                })}
             </MapWrapper>
+
+            {/* FLOATING LEGEND */}
+            <div className="absolute right-4 top-4 z-[9999] w-48 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 shadow-xl backdrop-blur-md pointer-events-auto transition-all">
+              <div 
+                className="flex cursor-pointer items-center justify-between p-2 hover:bg-[var(--card)]"
+                onClick={() => setIsLegendMinimized(!isLegendMinimized)}
+              >
+                <h4 className="px-1 text-[10px] font-bold uppercase text-[var(--text-faint)]">Zonas</h4>
+                <ChevronDown size={14} className={`text-[var(--text-faint)] transition-transform ${isLegendMinimized ? 'rotate-180' : ''}`} />
+              </div>
+              
+              {!isLegendMinimized && (
+                <div className="flex max-h-[60vh] flex-col gap-1 overflow-y-auto p-2 pt-0 custom-scrollbar">
+                  {Object.keys(zoneResults).map((name, idx) => {
+                    const color = getColor(idx);
+                    return (
+                      <div 
+                        key={name}
+                        onMouseEnter={() => setHoveredZone(name)}
+                        onMouseLeave={() => setHoveredZone(null)}
+                        className={`group/item flex items-center gap-2 rounded-lg p-2 transition-colors ${hoveredZone === name ? 'bg-[var(--card)] border border-[var(--accent)]' : 'hover:bg-[var(--card)] border border-transparent'}`}
+                      >
+                        <div className="h-3 w-3 shrink-0 rounded-full flex items-center justify-center text-[8px]" style={{ backgroundColor: color, color: 'white' }}></div>
+                        <span 
+                          className="flex-1 truncate text-xs font-bold text-white cursor-pointer hover:underline"
+                          onClick={() => handleRenameZone(name)}
+                          title="Clic para editar nombre"
+                        >
+                          {name}
+                        </span>
+                        <Pencil 
+                          size={10} 
+                          className="opacity-0 cursor-pointer transition-opacity group-hover/item:opacity-50 hover:!opacity-100 text-white" 
+                          onClick={() => handleRenameZone(name)}
+                        />
+                        <span className="text-[10px] text-[var(--text-faint)]">{zoneResults[name].ordered.length}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* FULLSCREEN BUTTON */}
             <div className="absolute left-4 top-4 z-[500]">

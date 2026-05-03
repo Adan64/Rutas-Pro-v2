@@ -43,11 +43,11 @@ export const Step2Config = () => {
 
   const [activeMapType, setActiveMapType] = useState('dark');
   const [mapTileUrl, setMapTileUrl] = useState('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
-  const [showFloatingZones, setShowFloatingZones] = useState(false);
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
+  const [isLegendMinimized, setIsLegendMinimized] = useState(false);
 
   const handleMapClick = (lat: number, lng: number) => {
     if (isSelectionMode) {
@@ -425,6 +425,8 @@ export const Step2Config = () => {
             // Sizes: normal=10, selected=16, hovered-zone=14
             const size = isSelected ? 16 : isHoveredZone ? 14 : 10;
             const half = size / 2;
+            const isDimmed = hoveredZone !== null && !isHoveredZone && !isSelected;
+            const opacity = isDimmed ? 0.2 : 1;
 
             let html: string;
             if (isSelected) {
@@ -441,6 +443,7 @@ export const Step2Config = () => {
               <Marker 
                 key={`client-${i}-${isSelected}-${isHoveredZone}`} 
                 position={[client.lat, client.lng]}
+                opacity={opacity}
                 eventHandlers={{
                   click: () => handlePointClick(i)
                 }}
@@ -490,51 +493,59 @@ export const Step2Config = () => {
           >
             <Maximize2 size={18} />
           </button>
-          <button 
-            onClick={() => setShowFloatingZones(!showFloatingZones)}
-            className={`flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] transition-colors bg-[var(--surface)]/90 backdrop-blur-md text-white shadow-xl ${showFloatingZones ? 'bg-[var(--accent)]' : 'hover:bg-[var(--card)]'}`}
-            title="Resumen de Zonas"
-          >
-            <Route size={18} />
-          </button>
         </div>
 
         {/* FLOATING RIGHT TOOLS */}
-        <div className="absolute right-4 top-4 z-[500]">
+        <div className="absolute right-4 top-4 z-[500] flex flex-col gap-4 items-end">
           <MapTypeSwitcher 
             activeType={activeMapType} 
             onTypeChange={(type) => { setActiveMapType(type.id); setMapTileUrl(type.url); }} 
           />
-        </div>
 
-        {/* FLOATING ZONE OVERLAY (FULLSCREEN FRIENDLY) */}
-        <AnimatePresence>
-          {showFloatingZones && (
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="absolute left-16 top-4 z-[500] w-64 max-h-[80vh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 p-4 shadow-2xl backdrop-blur-xl"
-            >
-              <div className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2">
-                <span className="text-xs font-bold text-white uppercase">Zonas</span>
-                <button onClick={() => setShowFloatingZones(false)} className="text-[var(--text-faint)]">✕</button>
+          {/* FLOATING ZONE OVERLAY (FULLSCREEN FRIENDLY) */}
+          {Object.keys(zones).length > 0 && (
+            <div className="w-48 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/90 shadow-xl backdrop-blur-md pointer-events-auto transition-all">
+              <div 
+                className="flex cursor-pointer items-center justify-between p-2 hover:bg-[var(--card)]"
+                onClick={() => setIsLegendMinimized(!isLegendMinimized)}
+              >
+                <h4 className="px-1 text-[10px] font-bold uppercase text-[var(--text-faint)]">Zonas</h4>
+                <ChevronDown size={14} className={`text-[var(--text-faint)] transition-transform ${isLegendMinimized ? 'rotate-180' : ''}`} />
               </div>
-              <div className="space-y-2">
-                {Object.entries(zones).map(([name, clients]) => {
-                  const config = zoneConfigs[name] || { color: '#6366f1', icon: '📍' };
-                  return (
-                    <div key={name} className="flex items-center gap-2 text-xs">
-                      <span style={{ color: config.color }}>{config.icon}</span>
-                      <span className="flex-1 font-bold text-white truncate">{name}</span>
-                      <span className="text-[var(--text-faint)]">{clients.length}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
+              
+              {!isLegendMinimized && (
+                <div className="flex max-h-[60vh] flex-col gap-1 overflow-y-auto p-2 pt-0 custom-scrollbar">
+                  {Object.entries(zones).map(([name, clients]) => {
+                    const config = zoneConfigs[name] || { color: '#6366f1', icon: '📍' };
+                    return (
+                      <div 
+                        key={name}
+                        onMouseEnter={() => setHoveredZone(name)}
+                        onMouseLeave={() => setHoveredZone(null)}
+                        className={`group/item flex items-center gap-2 rounded-lg p-2 transition-colors ${hoveredZone === name ? 'bg-[var(--card)] border border-[var(--accent)]' : 'hover:bg-[var(--card)] border border-transparent'}`}
+                      >
+                        <div className="h-3 w-3 shrink-0 rounded-full flex items-center justify-center text-[8px]" style={{ backgroundColor: config.color, color: 'white' }}></div>
+                        <span 
+                          className="flex-1 truncate text-xs font-bold text-white cursor-pointer hover:underline"
+                          onClick={() => handleRenameZone(name)}
+                          title="Clic para editar nombre"
+                        >
+                          {name}
+                        </span>
+                        <Pencil 
+                          size={10} 
+                          className="opacity-0 cursor-pointer transition-opacity group-hover/item:opacity-50 hover:!opacity-100 text-white" 
+                          onClick={() => handleRenameZone(name)}
+                        />
+                        <span className="text-[10px] text-[var(--text-faint)]">{clients.length}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
-        </AnimatePresence>
+        </div>
 
         {/* SELECTION PILL */}
         <AnimatePresence>

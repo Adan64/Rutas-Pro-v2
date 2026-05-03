@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronDown,
   TrendingDown,
+  Maximize2,
   MessageCircle,
   Pencil,
   GripVertical,
@@ -138,7 +139,7 @@ export const Step3Results = () => {
       {/* ACTIONS */}
       <div className="flex flex-wrap gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3">
         <button 
-          onClick={calculateOSRM}
+          onClick={() => calculateOSRM()}
           disabled={isCalculating}
           className="btn-primary btn-sm flex items-center gap-2 disabled:opacity-50"
         >

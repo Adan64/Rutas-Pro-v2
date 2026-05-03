@@ -114,8 +114,14 @@ const DEFAULT_STATE: {
   zoneResults: Record<string, RouteResult>;
   currentStep: number;
   isCalculating: boolean;
+  osrmProgress: {
+    isVisible: boolean;
+    log: string[];
+    isComplete: boolean;
+  };
   selectedIndices: Set<number>;
   isSelectionMode: boolean;
+  clearSelectionTrigger: number;
 } = {
   rawClients: [],
   zones: {},

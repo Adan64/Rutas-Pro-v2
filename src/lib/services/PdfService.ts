@@ -55,8 +55,8 @@ export function exportResultsToPdf(drivers: any[], zoneResults: Record<string, a
           c.ORDER,
           c.CLIENTE,
           c.NOMBRE_CLIENTE,
-          zoneName,
-          c.DESCRIPCION,
+          `Día ${c.SCHEDULE_DAY || 1}`,
+          `${c.ARRIVAL_TIME_STR} - ${c.DEPARTURE_TIME_STR}`,
           c.LEG_KM_REAL != null ? `${rd(c.LEG_KM_REAL, 1)} km *` : `${c.LEG_KM} km`
         ]);
       });
@@ -64,7 +64,7 @@ export function exportResultsToPdf(drivers: any[], zoneResults: Record<string, a
 
     autoTable(doc, {
       startY: currentY,
-      head: [['#', 'ID', 'Cliente', 'Zona', 'Descripción', 'Distancia']],
+      head: [['#', 'ID', 'Cliente', 'Día', 'Horario', 'Distancia']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
@@ -72,7 +72,8 @@ export function exportResultsToPdf(drivers: any[], zoneResults: Record<string, a
       columnStyles: {
         0: { cellWidth: 8 },
         1: { cellWidth: 15 },
-        3: { cellWidth: 20 },
+        3: { cellWidth: 15 },
+        4: { cellWidth: 25 },
         5: { cellWidth: 22, halign: 'right' }
       },
       margin: { left: 14, right: 14 },

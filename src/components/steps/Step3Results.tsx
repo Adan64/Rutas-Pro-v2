@@ -12,6 +12,7 @@ import {
   Route, 
   Printer,
   ChevronRight,
+  ChevronDown,
   TrendingDown,
   Maximize2
 } from 'lucide-react';
@@ -38,6 +39,7 @@ export const Step3Results = () => {
     setStep, calculateOSRM, isCalculating
   } = useRutasStore();
   const [activeTab, setActiveTab] = useState('map');
+  const [expandedZone, setExpandedZone] = useState<string | null>(null);
 
   const toggleFullscreen = () => {
     const mapDiv = document.getElementById('results-map-container');
@@ -244,16 +246,56 @@ export const Step3Results = () => {
                   const driver = drivers.find(d => d.zones.includes(name));
                   const currentKm = res.totalKmReal || (res.totalKm + res.returnKm);
                   const saving = Math.max(0, res.unoptimizedKm - currentKm);
+                  const isExpanded = expandedZone === name;
+
                   return (
-                    <tr key={name} className="hover:bg-[var(--card)] transition-colors">
-                      <td className="px-6 py-4 font-bold text-white">{name}</td>
-                      <td className="px-6 py-4 text-[var(--text-muted)]">{driver?.name}</td>
-                      <td className="px-6 py-4 text-[var(--text-muted)]">{res.ordered.length}</td>
-                      <td className="px-6 py-4 font-bold text-[var(--cyan)]">
-                        {rd(currentKm, 1)} km {res.totalKmReal && '🛣️'}
-                      </td>
-                      <td className="px-6 py-4 text-[var(--green)] font-bold">+{rd(saving, 1)} km</td>
-                    </tr>
+                    <React.Fragment key={name}>
+                      <tr 
+                        onClick={() => setExpandedZone(isExpanded ? null : name)}
+                        className={`cursor-pointer transition-colors ${isExpanded ? 'bg-[var(--card)]' : 'hover:bg-[var(--card)]'}`}
+                      >
+                        <td className="px-6 py-4 font-bold text-white flex items-center gap-2">
+                          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          {name}
+                        </td>
+                        <td className="px-6 py-4 text-[var(--text-muted)]">{driver?.name}</td>
+                        <td className="px-6 py-4 text-[var(--text-muted)]">{res.ordered.length}</td>
+                        <td className="px-6 py-4 font-bold text-[var(--cyan)]">
+                          {rd(currentKm, 1)} km {res.totalKmReal && '🛣️'}
+                        </td>
+                        <td className="px-6 py-4 text-[var(--green)] font-bold">+{rd(saving, 1)} km</td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="bg-[var(--background)]">
+                          <td colSpan={5} className="p-4">
+                            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
+                              <table className="w-full text-xs">
+                                <thead className="text-[var(--text-faint)] uppercase">
+                                  <tr>
+                                    <th className="pb-2 text-left">Orden</th>
+                                    <th className="pb-2 text-left">Cliente</th>
+                                    <th className="pb-2 text-center">Día</th>
+                                    <th className="pb-2 text-center">Llegada</th>
+                                    <th className="pb-2 text-center">Salida</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {res.ordered.map((c) => (
+                                    <tr key={c.CLIENTE} className="border-t border-[var(--border)] hover:bg-[var(--card)]">
+                                      <td className="py-2 text-[var(--accent)] font-bold">{c.ORDER}</td>
+                                      <td className="py-2 text-white font-medium">{c.NOMBRE_CLIENTE}</td>
+                                      <td className="py-2 text-center text-[var(--text-muted)] font-bold">Día {c.SCHEDULE_DAY}</td>
+                                      <td className="py-2 text-center text-[var(--text-muted)]">{c.ARRIVAL_TIME_STR}</td>
+                                      <td className="py-2 text-center text-[var(--text-muted)]">{c.DEPARTURE_TIME_STR}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

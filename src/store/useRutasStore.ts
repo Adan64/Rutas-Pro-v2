@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Client, RouteResult, nearestNeighbor } from '../lib/routing/RouteEngine';
+import { Client, RouteResult, nearestNeighbor, applySchedules } from '../lib/routing/RouteEngine';
 
 // Curated palette of 20 visually distinct colors for zone auto-assignment
 const ZONE_PALETTE = [
@@ -240,13 +240,24 @@ export const useRutasStore = create<AppState>((set, get) => ({
   })),
 
   calculate: async () => {
-    const { zones, startLat, startLon, numDrivers } = get();
+    const { 
+      zones, startLat, startLon, numDrivers,
+      startTime, workHours, serviceTime, lunchMin 
+    } = get();
     set({ isCalculating: true });
+
+    const config = {
+      startTime,
+      workHours,
+      serviceTime,
+      lunchMin
+    };
 
     // 1. Optimize Each Zone
     const results: Record<string, RouteResult> = {};
     Object.entries(zones).forEach(([name, clients]) => {
-      results[name] = nearestNeighbor(clients, startLat, startLon);
+      const optimized = nearestNeighbor(clients, startLat, startLon);
+      results[name] = applySchedules(optimized, config, startLat, startLon);
     });
 
     // 2. Assign Zones to Drivers (Load balancing)

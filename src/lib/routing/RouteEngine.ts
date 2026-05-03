@@ -118,3 +118,87 @@ export function nearestNeighbor(
     unoptimizedKm: rd(uKm, 4),
   };
 }
+
+export interface ScheduleConfig {
+  startTime: string;
+  workHours: number;
+  serviceTime: number;
+  lunchMin: number;
+  avgSpeed?: number;
+}
+
+function formatTime(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60) % 24;
+  const m = Math.floor(totalMinutes % 60);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Applies time scheduling, lunch breaks, and work hour limits to a calculated route.
+ */
+export function applySchedules(
+  result: RouteResult,
+  config: ScheduleConfig,
+  startLat: number,
+  startLon: number
+): RouteResult {
+  const avgSpeed = config.avgSpeed || 30; // 30 km/h default
+  const [sH, sM] = config.startTime.split(':').map(Number);
+  const startMin = sH * 60 + sM;
+  const LUNCH_THRESHOLD = 11.5 * 60; // 11:30 AM
+
+  let currentDay = 1;
+  let currentMin = startMin;
+  let totalKm = 0;
+
+  const newOrdered = result.ordered.map((client) => {
+    let travelMin = ((client.LEG_KM || 0) / avgSpeed) * 60;
+    let arrival = currentMin + travelMin;
+
+    if (arrival > LUNCH_THRESHOLD && currentMin <= LUNCH_THRESHOLD && config.lunchMin > 0) {
+      arrival += config.lunchMin;
+    }
+
+    let departure = arrival + config.serviceTime;
+
+    const returnKm = calculateHaversine(client.lat, client.lng, startLat, startLon);
+    const returnMin = (returnKm / avgSpeed) * 60;
+
+    // Check if limits exceeded
+    if ((departure + returnMin - startMin) > config.workHours * 60) {
+      currentDay++;
+      currentMin = startMin;
+
+      const fromBaseKm = calculateHaversine(startLat, startLon, client.lat, client.lng);
+      const newTravelMin = (fromBaseKm / avgSpeed) * 60;
+
+      client.LEG_KM = rd(fromBaseKm, 4);
+      arrival = currentMin + newTravelMin;
+
+      if (arrival > LUNCH_THRESHOLD && currentMin <= LUNCH_THRESHOLD && config.lunchMin > 0) {
+        arrival += config.lunchMin;
+      }
+      departure = arrival + config.serviceTime;
+    }
+
+    totalKm += (client.LEG_KM || 0);
+    client.CUM_KM = rd(totalKm, 4);
+
+    client.SCHEDULE_DAY = currentDay;
+    client.ARRIVAL_TIME_STR = formatTime(arrival);
+    client.DEPARTURE_TIME_STR = formatTime(departure);
+
+    currentMin = departure;
+    return client;
+  });
+
+  const lastClient = newOrdered[newOrdered.length - 1];
+  const finalReturnKm = lastClient ? calculateHaversine(lastClient.lat, lastClient.lng, startLat, startLon) : 0;
+
+  return {
+    ...result,
+    ordered: newOrdered,
+    totalKm: rd(totalKm, 4),
+    returnKm: rd(finalReturnKm, 4)
+  };
+}

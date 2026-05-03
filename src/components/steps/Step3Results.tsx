@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion, Reorder } from 'framer-motion';
 import { 
   Map as MapIcon, 
   Users, 
@@ -14,7 +14,10 @@ import {
   ChevronRight,
   ChevronDown,
   TrendingDown,
-  Maximize2
+  Maximize2,
+  MessageCircle,
+  Pencil,
+  GripVertical
 } from 'lucide-react';
 import { useRutasStore } from '@/store/useRutasStore';
 import { MapWrapper } from '../map/MapWrapper';
@@ -36,10 +39,12 @@ export const Step3Results = () => {
   const { 
     zoneResults, drivers, startLat, startLon, 
     fuelL100, fuelPrice,
-    setStep, calculateOSRM, isCalculating
+    setStep, calculateOSRM, isCalculating,
+    renameDriver, reorderRoute
   } = useRutasStore();
   const [activeTab, setActiveTab] = useState('map');
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   const toggleFullscreen = () => {
     const mapDiv = document.getElementById('results-map-container');
@@ -65,6 +70,35 @@ export const Step3Results = () => {
 
     return { totKm, liters, cost, savedKm, savedCost };
   }, [zoneResults, fuelL100, fuelPrice]);
+
+  const handleRenameDriver = (index: number, oldName: string) => {
+    const newName = window.prompt(`Renombrar a ${oldName}:`, oldName);
+    if (newName) {
+      renameDriver(index, newName);
+    }
+  };
+
+  const handleCopyWhatsApp = (driver: any) => {
+    let text = `🚚 *Ruta: ${driver.name}*\n\n`;
+    
+    driver.zones.forEach((zoneName: string) => {
+      text += `📍 *Zona: ${zoneName}*\n`;
+      const result = zoneResults[zoneName];
+      if (result) {
+        result.ordered.forEach((c) => {
+          const time = c.ARRIVAL_TIME_STR ? `${c.ARRIVAL_TIME_STR} - ` : '';
+          text += `  ${c.ORDER}️⃣ ${time}${c.NOMBRE_CLIENTE}\n`;
+          text += `      🗺️ ${c.DESCRIPCION || 'Sin dirección'}\n`;
+        });
+      }
+      text += `\n`;
+    });
+
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyFeedback(driver.name);
+      setTimeout(() => setCopyFeedback(null), 2000);
+    });
+  };
 
   return (
     <motion.div 
@@ -201,28 +235,66 @@ export const Step3Results = () => {
         {activeTab === 'drivers' && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
              {drivers.map((d, i) => (
-               <div key={i} className="card-premium">
+               <div key={i} className="card-premium flex flex-col max-h-[80vh]">
                  <div className="mb-4 flex items-center justify-between border-b border-[var(--border)] pb-3">
-                   <h3 className="font-bold text-white">{d.name}</h3>
-                   <span className="rounded-full bg-[var(--accent-glow)] px-2 py-1 text-[10px] font-bold text-[var(--accent-hover)]">
-                    {d.totalClients} clientes
-                   </span>
+                   <h3 className="font-bold text-white group/name cursor-pointer flex items-center gap-2" onClick={() => handleRenameDriver(i, d.name)} title="Renombrar">
+                      {d.name} <Pencil size={12} className="opacity-50 hover:opacity-100 transition-opacity" />
+                   </h3>
+                   <div className="flex items-center gap-3">
+                     <span className="rounded-full bg-[var(--accent-glow)] px-2 py-1 text-[10px] font-bold text-[var(--accent-hover)]">
+                      {d.totalClients} clientes
+                     </span>
+                     {copyFeedback === d.name ? (
+                        <span className="text-xs text-green-400 font-bold">¡Copiado!</span>
+                     ) : (
+                       <button onClick={() => handleCopyWhatsApp(d)} className="text-[var(--green)] hover:scale-110 transition-transform" title="Copiar ruta a WhatsApp">
+                         <MessageCircle size={16} />
+                       </button>
+                     )}
+                   </div>
                  </div>
-                 <div className="space-y-3">
-                   <div className="flex justify-between text-sm">
-                     <span className="text-[var(--text-faint)]">KM Totales:</span>
-                     <span className="font-bold text-white">{rd(d.totalKm, 1)} km</span>
-                   </div>
-                   <div className="space-y-1">
-                     <span className="text-[10px] font-bold uppercase text-[var(--text-faint)]">Zonas asignadas:</span>
-                     <div className="flex flex-wrap gap-1">
-                       {d.zones.map(z => (
-                         <span key={z} className="rounded-md bg-[var(--card)] px-2 py-1 text-[10px] font-medium text-[var(--text-muted)] border border-[var(--border)]">
-                           {z}
-                         </span>
-                       ))}
-                     </div>
-                   </div>
+                 <div className="flex justify-between text-sm mb-3">
+                   <span className="text-[var(--text-faint)]">KM Totales:</span>
+                   <span className="font-bold text-[var(--cyan)]">{rd(d.totalKm, 1)} km</span>
+                 </div>
+                 
+                 <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+                   {d.zones.map(z => {
+                     const res = zoneResults[z];
+                     if (!res) return null;
+                     return (
+                       <div key={z} className="bg-[var(--background)]/30 rounded-xl p-2 border border-[var(--border)]">
+                         <h4 className="text-xs font-bold text-[var(--accent)] mb-2 uppercase tracking-wider">{z}</h4>
+                         <Reorder.Group 
+                           axis="y" 
+                           values={res.ordered} 
+                           onReorder={(newOrder) => updateZoneOrder(z, newOrder)}
+                           className="flex flex-col gap-1"
+                         >
+                           {res.ordered.map((c) => (
+                             <Reorder.Item 
+                               key={c.CLIENTE} 
+                               value={c}
+                               className="flex items-center gap-2 bg-[var(--card)] p-2 rounded-lg border border-[var(--border)] cursor-grab active:cursor-grabbing hover:border-[var(--accent)] transition-colors"
+                             >
+                               <GripVertical size={14} className="text-[var(--text-muted)]" />
+                               <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--surface)] text-[10px] font-bold text-[var(--text-muted)] shrink-0">
+                                 {c.ORDER}
+                               </div>
+                               <div className="flex flex-col flex-1 min-w-0">
+                                 <span className="text-xs font-bold text-white truncate">{c.NOMBRE_CLIENTE}</span>
+                                 <span className="text-[9px] text-[var(--text-faint)] truncate">{c.DESCRIPCION || 'Sin dirección'}</span>
+                               </div>
+                               <div className="flex flex-col items-end shrink-0">
+                                 <span className="text-[10px] font-bold text-[var(--text-muted)]">Día {c.SCHEDULE_DAY}</span>
+                                 <span className="text-[10px] text-[var(--text-faint)]">{c.ARRIVAL_TIME_STR}</span>
+                               </div>
+                             </Reorder.Item>
+                           ))}
+                         </Reorder.Group>
+                       </div>
+                     );
+                   })}
                  </div>
                </div>
              ))}

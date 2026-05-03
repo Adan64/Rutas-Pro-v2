@@ -119,6 +119,44 @@ export function nearestNeighbor(
   };
 }
 
+/**
+ * Recalculates distances for an existing route based on a specific manual order.
+ */
+export function recalculateRouteDistances(
+  clients: Client[],
+  startLat: number,
+  startLon: number,
+  unoptimizedKm: number
+): RouteResult {
+  let cumKm = 0;
+  let curLat = startLat;
+  let curLon = startLon;
+
+  const newOrdered = clients.map((c, i) => {
+    const d = calculateHaversine(curLat, curLon, c.lat, c.lng);
+    cumKm += d;
+    curLat = c.lat;
+    curLon = c.lng;
+
+    return {
+      ...c,
+      ORDER: i + 1,
+      LEG_KM: rd(d, 4),
+      CUM_KM: rd(cumKm, 4),
+      DIST_DIRECT: rd(calculateHaversine(startLat, startLon, c.lat, c.lng), 4)
+    };
+  });
+
+  const returnKm = calculateHaversine(curLat, curLon, startLat, startLon);
+
+  return {
+    ordered: newOrdered,
+    totalKm: rd(cumKm, 4),
+    returnKm: rd(returnKm, 4),
+    unoptimizedKm
+  };
+}
+
 export interface ScheduleConfig {
   startTime: string;
   workHours: number;

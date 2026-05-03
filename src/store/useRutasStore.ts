@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Client, RouteResult, nearestNeighbor, applySchedules } from '../lib/routing/RouteEngine';
+import { Client, RouteResult, nearestNeighbor, applySchedules, recalculateRouteDistances } from '../lib/routing/RouteEngine';
 
 // Curated palette of 20 visually distinct colors for zone auto-assignment
 const ZONE_PALETTE = [
@@ -82,6 +82,8 @@ interface AppState {
   setSelectedIndices: (indices: Set<number>) => void;
   assignToZone: (zoneName: string) => void;
   renameZone: (oldName: string, newName: string) => void;
+  renameDriver: (driverIndex: number, newName: string) => void;
+  updateZoneOrder: (zoneName: string, newOrder: Client[]) => void;
   clearSelection: () => void;
   calculate: () => Promise<void>;
   calculateOSRM: () => Promise<void>;
@@ -232,6 +234,43 @@ export const useRutasStore = create<AppState>((set, get) => ({
       zones: newZones,
       zoneConfigs: updatedConfigs
     };
+  }),
+
+  renameDriver: (driverIndex, newName) => set((state) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return state;
+    const newDrivers = [...state.drivers];
+    newDrivers[driverIndex] = { ...newDrivers[driverIndex], name: trimmed };
+    return { drivers: newDrivers };
+  }),
+
+  updateZoneOrder: (zoneName, newOrder) => set((state) => {
+    const zoneResult = state.zoneResults[zoneName];
+    if (!zoneResult) return state;
+
+    const config = {
+      startTime: state.startTime,
+      workHours: state.workHours,
+      serviceTime: state.serviceTime,
+      lunchMin: state.lunchMin
+    };
+
+    const recalculated = recalculateRouteDistances(newOrder, state.startLat, state.startLon, zoneResult.unoptimizedKm);
+    const fullyScheduled = applySchedules(recalculated, config, state.startLat, state.startLon);
+
+    // Update the specific zone
+    const newZoneResults = { ...state.zoneResults, [zoneName]: fullyScheduled };
+
+    // Update driver distances
+    const newDrivers = state.drivers.map(d => {
+      if (d.zones.includes(zoneName)) {
+        const totalKm = d.zones.reduce((sum, z) => sum + (newZoneResults[z]?.totalKm || 0) + (newZoneResults[z]?.returnKm || 0), 0);
+        return { ...d, totalKm };
+      }
+      return d;
+    });
+
+    return { zoneResults: newZoneResults, drivers: newDrivers };
   }),
 
   clearSelection: () => set((state) => ({ 

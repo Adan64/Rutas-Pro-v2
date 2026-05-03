@@ -335,7 +335,7 @@ export const Step2Config = () => {
                            <div className="flex flex-col group/name cursor-pointer" onClick={() => handleRenameZone(name)} title="Clic para renombrar">
                               <span className="text-sm font-bold text-white leading-tight flex items-center gap-1">
                                 {name}
-                                <Pencil size={12} className="opacity-0 transition-opacity group-hover/name:opacity-50" />
+                                <Pencil size={12} className="opacity-50 transition-opacity hover:opacity-100" />
                               </span>
                               <span className="text-[10px] font-medium text-[var(--text-faint)] uppercase tracking-wider">{clients.length} paradas</span>
                            </div>

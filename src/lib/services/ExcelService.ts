@@ -94,6 +94,20 @@ export function downloadTemplate() {
   XLSX.writeFile(wb, 'rutaspro_planilla_base.xlsx');
 }
 
+export function exportAssignmentsToExcel(clients: Client[]) {
+  const wb = XLSX.utils.book_new();
+  const rows = clients.map(c => ({
+    'CLIENTE': c.CLIENTE,
+    'RAZON SOCIAL': c.RAZON_SOCIAL,
+    'ZONA': c.ZONA || 'SIN ZONA',
+    'LATITUD': c.lat,
+    'LONGITUD': c.lng
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Asignaciones');
+  XLSX.writeFile(wb, `RutasPro_Asignaciones_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
 export function exportResultsToExcel(drivers: any[], zoneResults: Record<string, any>) {
   const wb = XLSX.utils.book_new();
 

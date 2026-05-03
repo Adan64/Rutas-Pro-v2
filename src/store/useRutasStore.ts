@@ -81,6 +81,7 @@ interface AppState {
   toggleSelectionMode: () => void;
   setSelectedIndices: (indices: Set<number>) => void;
   assignToZone: (zoneName: string) => void;
+  renameZone: (oldName: string, newName: string) => void;
   clearSelection: () => void;
   calculate: () => Promise<void>;
   calculateOSRM: () => Promise<void>;
@@ -198,6 +199,38 @@ export const useRutasStore = create<AppState>((set, get) => ({
       zones: newZones, 
       zoneConfigs: updatedConfigs,
       selectedIndices: new Set<number>() 
+    };
+  }),
+
+  renameZone: (oldName, newName) => set((state) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return state;
+
+    // Update clients
+    const updatedClients = state.rawClients.map(c => 
+      c.ZONA === oldName ? { ...c, ZONA: trimmed } : c
+    );
+
+    // Rebuild zones
+    const newZones: Record<string, Client[]> = {};
+    updatedClients.forEach(c => {
+      if (c.ZONA && c.ZONA !== 'SIN ZONA') {
+        if (!newZones[c.ZONA]) newZones[c.ZONA] = [];
+        newZones[c.ZONA].push(c);
+      }
+    });
+
+    // Transfer config
+    const updatedConfigs = { ...state.zoneConfigs };
+    if (updatedConfigs[oldName]) {
+      updatedConfigs[trimmed] = updatedConfigs[oldName];
+      delete updatedConfigs[oldName];
+    }
+
+    return {
+      rawClients: updatedClients,
+      zones: newZones,
+      zoneConfigs: updatedConfigs
     };
   }),
 

@@ -15,12 +15,16 @@ import {
   Maximize2,
   Minus,
   Plus,
-  Route
+  Route,
+  Download,
+  AlertTriangle,
+  Pencil
 } from 'lucide-react';
 import { useRutasStore } from '@/store/useRutasStore';
 import { MapWrapper } from '../map/MapWrapper';
 import { MapTypeSwitcher } from '../map/MapTypeSwitcher';
 import { ZoneModal } from '../ui/ZoneModal';
+import { exportAssignmentsToExcel } from '@/lib/services/ExcelService';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { isPointInLayer } from '@/lib/utils/geo';
@@ -34,7 +38,7 @@ export const Step2Config = () => {
     updateConfig, setStep, calculate, isCalculating,
     zones, rawClients, zoneConfigs, updateZoneConfig,
     selectedIndices, setSelectedIndices, isSelectionMode, toggleSelectionMode, assignToZone,
-    clearSelection, clearSelectionTrigger
+    renameZone, clearSelection, clearSelectionTrigger
   } = useRutasStore();
 
   const [activeMapType, setActiveMapType] = useState('dark');
@@ -83,6 +87,17 @@ export const Step2Config = () => {
 
   const handleClearSelection = () => {
     clearSelection();
+  };
+
+  const handleRenameZone = (oldName: string) => {
+    const newName = window.prompt(`Cambiar nombre de la zona "${oldName}":`, oldName);
+    if (newName) {
+      renameZone(oldName, newName);
+    }
+  };
+
+  const handleExportExcel = () => {
+    exportAssignmentsToExcel(rawClients);
   };
 
   const toggleFullscreen = () => {
@@ -167,6 +182,19 @@ export const Step2Config = () => {
           <p className="mt-4 text-[11px] text-[var(--text-faint)]">
             Las zonas se distribuirán automáticamente entre los {numDrivers} repartidores.
           </p>
+          {numDrivers > Object.keys(zones).length && Object.keys(zones).length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-3 flex items-start gap-2 rounded-lg bg-[var(--amber)]/10 p-3 text-[var(--amber)] border border-[var(--amber)]/20"
+            >
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <p className="text-[11px] leading-snug">
+                <strong>Atención:</strong> Hay más repartidores ({numDrivers}) que zonas asignadas ({Object.keys(zones).length}). 
+                Algunos repartidores quedarán sin ruta. Reducí repartidores o creá más zonas.
+              </p>
+            </motion.div>
+          )}
         </div>
 
         {/* ADVANCED TOGGLE */}
@@ -304,8 +332,11 @@ export const Step2Config = () => {
                            >
                              {config.icon}
                            </div>
-                           <div className="flex flex-col">
-                              <span className="text-sm font-bold text-white leading-tight">{name}</span>
+                           <div className="flex flex-col group/name cursor-pointer" onClick={() => handleRenameZone(name)} title="Clic para renombrar">
+                              <span className="text-sm font-bold text-white leading-tight flex items-center gap-1">
+                                {name}
+                                <Pencil size={12} className="opacity-0 transition-opacity group-hover/name:opacity-50" />
+                              </span>
                               <span className="text-[10px] font-medium text-[var(--text-faint)] uppercase tracking-wider">{clients.length} paradas</span>
                            </div>
                         </div>
@@ -335,6 +366,17 @@ export const Step2Config = () => {
               })
             )}
           </div>
+          {Object.keys(zones).length > 0 && (
+            <div className="mt-3 border-t border-[var(--border)] pt-3">
+              <button 
+                onClick={handleExportExcel}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--surface)] py-2 text-xs font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--card)] hover:text-white border border-[var(--border)]"
+              >
+                <Download size={14} />
+                Descargar Asignaciones (Excel)
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="mt-auto flex gap-3 pt-4">

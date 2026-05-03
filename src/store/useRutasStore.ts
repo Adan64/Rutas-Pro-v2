@@ -69,6 +69,7 @@ interface AppState {
   // Selection & Editing
   selectedIndices: Set<number>;
   isSelectionMode: boolean;
+  clearSelectionTrigger: number;
 
   // Actions
   setRawClients: (data: { clients: Client[]; zones: Record<string, Client[]>; filename: string }) => void;
@@ -80,6 +81,7 @@ interface AppState {
   toggleSelectionMode: () => void;
   setSelectedIndices: (indices: Set<number>) => void;
   assignToZone: (zoneName: string) => void;
+  clearSelection: () => void;
   calculate: () => Promise<void>;
   calculateOSRM: () => Promise<void>;
   reset: () => void;
@@ -125,6 +127,7 @@ const DEFAULT_STATE: {
   isCalculating: false,
   selectedIndices: new Set<number>(),
   isSelectionMode: false,
+  clearSelectionTrigger: 0,
 };
 
 export const useRutasStore = create<AppState>((set, get) => ({
@@ -197,6 +200,11 @@ export const useRutasStore = create<AppState>((set, get) => ({
       selectedIndices: new Set<number>() 
     };
   }),
+
+  clearSelection: () => set((state) => ({ 
+    selectedIndices: new Set<number>(), 
+    clearSelectionTrigger: state.clearSelectionTrigger + 1 
+  })),
 
   calculate: async () => {
     const { zones, startLat, startLon, numDrivers } = get();

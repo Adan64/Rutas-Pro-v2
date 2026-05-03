@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, 
   FeatureGroup, ZoomControl
@@ -26,13 +26,14 @@ interface MapProps {
   onMapClick?: (lat: number, lng: number) => void;
   onSelectionCreated?: (layer: any) => void;
   isSelectionMode?: boolean;
+  clearSelectionTrigger?: number;
   children?: React.ReactNode;
 }
 
-const MapEvents = ({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) => {
+const MapEvents = ({ onMapClick, isDrawingRef }: { onMapClick?: (lat: number, lng: number) => void, isDrawingRef: React.RefObject<boolean> }) => {
   useMapEvents({
     click: (e) => {
-      if (onMapClick) onMapClick(e.latlng.lat, e.latlng.lng);
+      if (!isDrawingRef.current && onMapClick) onMapClick(e.latlng.lat, e.latlng.lng);
     },
   });
   return null;
@@ -46,12 +47,23 @@ const ChangeView = ({ center, zoom }: { center: [number, number]; zoom: number }
   return null;
 };
 
-export const DynamicMap = ({ center, zoom, tileUrl, onMapClick, onSelectionCreated, isSelectionMode, children }: MapProps) => {
+export const DynamicMap = ({ 
+  center, zoom, tileUrl, onMapClick, onSelectionCreated, isSelectionMode, clearSelectionTrigger, children 
+}: MapProps) => {
   const mapRef = useRef<L.Map>(null);
 
   const onCreated = (e: any) => {
     if (onSelectionCreated) onSelectionCreated(e.layer);
   };
+
+  const isDrawingRef = useRef(false);
+  const featureGroupRef = useRef<L.FeatureGroup>(null);
+
+  useEffect(() => {
+    if (clearSelectionTrigger && clearSelectionTrigger > 0 && featureGroupRef.current) {
+      featureGroupRef.current.clearLayers();
+    }
+  }, [clearSelectionTrigger]);
 
   return (
     <div className="relative h-full w-full group">
@@ -69,10 +81,15 @@ export const DynamicMap = ({ center, zoom, tileUrl, onMapClick, onSelectionCreat
           attribution='&copy; OpenStreetMap'
         />
         
-        <FeatureGroup>
+        <FeatureGroup ref={featureGroupRef}>
           <EditControl
             position="bottomleft"
-            onCreated={onCreated}
+            onCreated={(e) => {
+              isDrawingRef.current = false;
+              onCreated(e);
+            }}
+            onDrawStart={() => { isDrawingRef.current = true; }}
+            onDrawStop={() => { isDrawingRef.current = false; }}
             draw={{
               rectangle: { shapeOptions: { color: '#6366f1' } },
               polygon: { shapeOptions: { color: '#6366f1' } },
@@ -82,14 +99,14 @@ export const DynamicMap = ({ center, zoom, tileUrl, onMapClick, onSelectionCreat
               polyline: false,
             }}
             edit={{
-               remove: true,
-               edit: false
+              remove: true,
+              edit: false
             }}
           />
         </FeatureGroup>
 
         <ChangeView center={center} zoom={zoom} />
-        <MapEvents onMapClick={onMapClick} />
+        <MapEvents onMapClick={onMapClick} isDrawingRef={isDrawingRef} />
         {children}
       </MapContainer>
     </div>

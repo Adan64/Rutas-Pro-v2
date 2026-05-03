@@ -108,6 +108,7 @@
 }
 .leaflet-draw-draw-rectangle::before { content: '⬜'; }
 .leaflet-draw-draw-polygon::before { content: '⬢'; }
+.leaflet-draw-edit-remove::before { content: '🗑️'; }
 .leaflet-draw-actions {
   left: 45px !important;
 }

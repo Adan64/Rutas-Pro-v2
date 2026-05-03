@@ -40,12 +40,16 @@ export const Step2Config = () => {
   const [mapTileUrl, setMapTileUrl] = useState('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
   const [showFloatingZones, setShowFloatingZones] = useState(false);
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
+  const [clearTrigger, setClearTrigger] = useState(0);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
 
   const handleMapClick = (lat: number, lng: number) => {
-    if (isSelectionMode) return; // Don't move start point in selection mode
+    if (isSelectionMode) {
+      setSelectedIndices(new Set()); // Click map to clear selection in selection mode
+      return;
+    }
     setStartPoint(lat, lng);
   };
 
@@ -79,6 +83,7 @@ export const Step2Config = () => {
 
   const handleClearSelection = () => {
     setSelectedIndices(new Set());
+    setClearTrigger(prev => prev + 1);
   };
 
   const toggleFullscreen = () => {
@@ -362,6 +367,7 @@ export const Step2Config = () => {
           onMapClick={handleMapClick}
           onSelectionCreated={handleSelectionCreated}
           isSelectionMode={isSelectionMode}
+          clearSelectionTrigger={clearTrigger}
         >
           <Marker position={[startLat, startLon]} icon={startIcon}>
             <Popup>
@@ -392,7 +398,7 @@ export const Step2Config = () => {
 
             return (
               <Marker 
-                key={i} 
+                key={`client-${i}-${isSelected}-${isHoveredZone}`} 
                 position={[client.lat, client.lng]}
                 eventHandlers={{
                   click: () => handlePointClick(i)
